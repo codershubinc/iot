@@ -64,8 +64,8 @@ func playerHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		backupFile, backupErr := os.Open("backup.png")
 		if backupErr == nil {
-			defer backupFile.Close()
 			img, _, err = image.Decode(backupFile)
+			backupFile.Close()
 		}
 		if err != nil || backupErr != nil {
 			img = image.NewRGBA(image.Rect(0, 0, 128, 128))
