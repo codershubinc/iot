@@ -1,194 +1,419 @@
 #include <Arduino.h>
 #include <WiFi.h>
-#include <HTTPClient.h>
+#include <ArduinoOTA.h>
+#include <ESPmDNS.h>
+#include <WebSocketsClient.h>
+#include <ArduinoJson.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_ST7735.h>
 #include <SPI.h>
 
-// --- TFT WIRING ---
-#define TFT_CS     5
-#define TFT_RST    4  
-#define TFT_DC     2
+#define TFT_CS 5
+#define TFT_RST 4
+#define TFT_DC 2
 
 Adafruit_ST7735 tft = Adafruit_ST7735(TFT_CS, TFT_DC, TFT_RST);
+WebSocketsClient webSocket;
 
-// --- NETWORK CONFIGURATION ---
-const char* ssid = "null";
-const char* password = "Aeiou@2357";
-const char* serverUrl = "http://192.168.1.106:8080/nowplaying"; 
+const char *ssid = "null";
+const char *password = "Aeiou@2357";
 
-unsigned long previousMillis = 0;
-const long interval = 1000; // Fetch data every 1 second
+String serverIP = "";
+uint16_t serverPort = 8081;
+unsigned long lastTelemetry = 0;
 
 // Custom Colors
 #define COLOR_GREY_TRACK 0x4208
-#define COLOR_PROGRESS   0x07E0 // Neon Green
-#define COLOR_ARTIST     0xBDF7 // Light Grey
-#define COLOR_TIME       0xFFE0 // Yellow
-#define COLOR_ACCENT     0x001F // Deep Blue
+#define COLOR_PROGRESS 0x07E0
+#define COLOR_ARTIST 0xBDF7
+#define COLOR_TIME 0xFFE0
+#define COLOR_ACCENT 0x001F
 
-// --- ANIMATED BOOT SEQUENCE ---
-void playBootAnimation() {
+enum DisplayMode
+{
+  BOOT,
+  MUSIC,
+  CLOCK,
+  STATS,
+  WALLPAPER
+};
+DisplayMode currentMode = BOOT;
+
+String currentTitle = "";
+String currentArtist = "";
+int titleScroll = 0;
+int artistScroll = 0;
+unsigned long lastScrollTime = 0;
+
+// Hardware Buttons
+#define BTN_PLAY_PAUSE 26
+#define BTN_NEXT 27
+#define BTN_PREV 25
+#define BTN_FOUR 14
+unsigned long lastBtnPress[4] = {0, 0, 0, 0};
+const int DEBOUNCE_DELAY = 300;
+
+void playBootAnimation()
+{
+  pinMode(BTN_PLAY_PAUSE, INPUT_PULLUP);
+  pinMode(BTN_NEXT, INPUT_PULLUP); 
+  pinMode(BTN_PREV, INPUT_PULLUP); 
+  pinMode(BTN_FOUR, INPUT_PULLUP);
+
   tft.fillScreen(ST77XX_BLACK);
-
-  // Decorative border frame
   tft.drawRect(4, 4, 120, 152, COLOR_GREY_TRACK);
   tft.drawRect(6, 6, 116, 148, COLOR_ACCENT);
 
-  // Title Text Render
   tft.setTextSize(1);
   tft.setTextColor(ST77XX_WHITE);
   tft.setCursor(32, 25);
-  tft.print("qqxion-iot");
+  tft.print("Quazaar IoT");
 
   tft.setTextColor(COLOR_ARTIST);
   tft.setCursor(24, 40);
   tft.print("by codershubinc");
 
-  tft.setTextColor(COLOR_TIME);
-  tft.setCursor(24, 75);
-  tft.print("Initializing...");
+  tft.setTextColor(COLOR_GREY_TRACK);
+  tft.setCursor(32, 135);
+  tft.print("v0.0.2-beta");
 
-  // Loading Bar Animation
-  int barX = 14;
-  int barY = 95;
-  int barWidth = 100;
-  int barHeight = 8;
-
+  int barX = 14, barY = 95, barWidth = 100, barHeight = 8;
   tft.drawRect(barX - 1, barY - 1, barWidth + 2, barHeight + 2, ST77XX_WHITE);
 
   WiFi.begin(ssid, password);
-  
   int progress = 0;
-  int attempts = 0;
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(150);
-    attempts++;
-    if (attempts > 100) ESP.restart(); // Restart if no connection after 15s
 
+  tft.setTextColor(COLOR_TIME);
+
+  while (WiFi.status() != WL_CONNECTED)
+  {
+    delay(50);
     progress += 4;
-    if (progress > barWidth) progress = barWidth;
-
+    if (progress > barWidth)
+      progress = barWidth;
     tft.fillRect(barX, barY, progress, barHeight, COLOR_PROGRESS);
 
-    if (progress > 60 && progress < 80) {
-      tft.fillRect(24, 75, 90, 8, ST77XX_BLACK);
-      tft.setCursor(24, 75);
-      tft.print("Linking Server.");
-    } else if (progress >= 80) {
-      tft.fillRect(24, 75, 90, 8, ST77XX_BLACK);
-      tft.setCursor(24, 75);
-      tft.print("Launching UI...");
-    }
-
-    if (progress >= barWidth && WiFi.status() != WL_CONNECTED) {
-      progress = barWidth - 10; 
-    }
+    tft.fillRect(24, 75, 90, 8, ST77XX_BLACK);
+    tft.setCursor(24, 75);
+    tft.print("Connecting Wi-Fi");
   }
 
-  tft.fillRect(barX, barY, barWidth, barHeight, COLOR_PROGRESS);
-  delay(400);
-  tft.fillScreen(ST77XX_BLACK);
-}
+  // mDNS Discovery Phase
+  tft.fillRect(24, 75, 90, 8, ST77XX_BLACK);
+  tft.setCursor(24, 75);
+  tft.print("Locating Server");
 
-void fetchAndDisplayPlayer() {
-  if (WiFi.status() != WL_CONNECTED) return;
+  if (!MDNS.begin("quazaar-node"))
+  {
+    Serial.println("Error starting mDNS");
+  }
 
-  HTTPClient http;
-  http.begin(serverUrl);
-  int httpCode = http.GET();
+  while (serverIP == "")
+  {
+    Serial.println("Searching for mDNS service 'quazaar-iot'...");
+    int n = MDNS.queryService("quazaar-iot", "tcp");
+    if (n > 0)
+    {
+      Serial.print("Found ");
+      Serial.print(n);
+      Serial.println(" services!");
 
-  if (httpCode == 200) {
-    WiFiClient *stream = http.getStreamPtr();
+      for (int i = 0; i < n; i++)
+      {
+        String ip = MDNS.address(i).toString();
 
-    String title    = stream->readStringUntil('\n');
-    String artist   = stream->readStringUntil('\n');
-    String currTime = stream->readStringUntil('\n');
-    String totTime  = stream->readStringUntil('\n');
-    String status   = stream->readStringUntil('\n');
-    String progStr  = stream->readStringUntil('\n');
+        // Extract real host IP from TXT record if provided by Go server
+        if (MDNS.hasTxt(i, "ip"))
+        {
+          String txtIP = MDNS.txt(i, "ip");
+          if (txtIP.length() > 7)
+          {
+            ip = txtIP;
+          }
+        }
 
-    title.trim();
-    artist.trim();
-    currTime.trim();
-    totTime.trim();
-    status.trim();
-    int progress = progStr.toInt(); // 0 to 128 pixels
+        Serial.print("  [");
+        Serial.print(i);
+        Serial.print("] IP: ");
+        Serial.print(ip);
+        Serial.print(" Port: ");
+        Serial.println(MDNS.port(i));
 
-    // --- 1. THE PROGRESS BAR ---
-    tft.fillRect(0, 128, progress, 3, COLOR_PROGRESS);
-    if (progress < 128) {
-      tft.fillRect(progress, 128, 128 - progress, 3, COLOR_GREY_TRACK);
-    }
-
-    // --- 2. TYPOGRAPHY PADDING ---
-    while(title.length() < 21) title += " ";
-    while(artist.length() < 21) artist += " ";
-
-    tft.setTextSize(1);
-
-    // Song Title (Y: 132) - Safely inside view
-    tft.setCursor(2, 132);
-    tft.setTextColor(ST77XX_WHITE, ST77XX_BLACK); 
-    tft.print(title.substring(0, 21));
-
-    // Artist (Y: 142) - Safely inside view
-    tft.setCursor(2, 142);
-    tft.setTextColor(COLOR_ARTIST, ST77XX_BLACK); 
-    tft.print(artist.substring(0, 21));
-
-    // Timing Line (Y: 152) - Pulled up to prevent bottom clipping
-    tft.setCursor(2, 152);
-    tft.setTextColor(COLOR_TIME, ST77XX_BLACK); 
-    tft.print(currTime);
-    tft.print(" / ");
-    tft.print(totTime);
-
-    // --- 3. ICONOGRAPHY (Play/Pause) ---
-    tft.fillRect(114, 150, 12, 10, ST77XX_BLACK);
-    if (status == "Playing") {
-      tft.fillRect(115, 151, 3, 8, COLOR_PROGRESS);
-      tft.fillRect(121, 151, 3, 8, COLOR_PROGRESS);
-    } else {
-      tft.fillTriangle(115, 151, 115, 159, 123, 155, ST77XX_RED); 
-    }
-
-    // --- 4. RENDER ALBUM ART ---
-    const int imageSize = 128 * 128 * 2;
-    uint8_t* imageBuffer = (uint8_t*) malloc(imageSize);
-
-    if (imageBuffer != NULL) {
-      size_t bytesRead = 0;
-      while (http.connected() && bytesRead < imageSize) {
-        size_t available = stream->available();
-        if (available) {
-          size_t spaceLeft = imageSize - bytesRead;
-          size_t toRead = (available < spaceLeft) ? available : spaceLeft;
-          int c = stream->readBytes(&imageBuffer[bytesRead], toRead);
-          bytesRead += c;
+        if (ip.startsWith("192.") || ip.startsWith("10.") || serverIP == "")
+        {
+          serverIP = ip;
+          serverPort = MDNS.port(i);
         }
       }
 
-      tft.drawRGBBitmap(0, 0, (uint16_t*)imageBuffer, 128, 128);
-      free(imageBuffer);
+      Serial.print("-> Selected Server IP: ");
+      Serial.println(serverIP);
     }
+    else
+    {
+      Serial.println("No services found, retrying...");
+    }
+    delay(1000);
   }
-  http.end();
+
+  // Fallback override is now safely commented out because TXT records work flawlessly!
+  // serverIP = "192.168.1.107";
+  // serverPort = 8081;
+
+  tft.fillRect(barX, barY, barWidth, barHeight, COLOR_PROGRESS);
+  delay(100);
+  tft.fillScreen(ST77XX_BLACK);
 }
 
-void setup() {
+void webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
+{
+  switch (type)
+  {
+  case WStype_DISCONNECTED:
+    Serial.println("[WS] Disconnected!");
+    break;
+
+  case WStype_CONNECTED:
+    Serial.println("[WS] Connected!");
+    tft.fillScreen(ST77XX_BLACK); // Clear the boot screen
+    break;
+
+  case WStype_TEXT:
+  {
+    // If it starts with '{', it's a JSON command from the Web Dashboard
+    if (payload[0] == '{')
+    {
+      StaticJsonDocument<200> doc;
+      DeserializationError error = deserializeJson(doc, payload);
+
+
+
+      if (!error && doc["type"] == "command")
+      {
+        if (doc["action"] == "reboot")
+        {
+          ESP.restart();
+        }
+        else if (doc["action"] == "clear")
+        {
+          tft.fillScreen(ST77XX_BLACK);
+          currentMode = MUSIC;
+        }
+        else if (doc["action"] == "wallpaper")
+        {
+          tft.fillScreen(ST77XX_BLACK);
+          currentMode = WALLPAPER;
+        }
+      }
+    }
+    // Otherwise, it is the Music Metadata payload
+    else
+    {
+      if (currentMode == WALLPAPER)
+      {
+        break; // Ignore background music updates while wallpaper is active
+      }
+
+
+
+      int linesFound = 0;
+      int lastPos = 0;
+      String meta[8];
+
+      for (size_t i = 0; i < length; i++)
+      {
+        if (payload[i] == '\n')
+        {
+          for (size_t j = lastPos; j < i; j++)
+          {
+            meta[linesFound] += (char)payload[j];
+          }
+          linesFound++;
+          lastPos = i + 1;
+          if (linesFound == 8)
+            break;
+        }
+      }
+
+      if (linesFound == 8)
+      {
+        String title = meta[0];
+        String artist = meta[1];
+        String currTime = meta[2];
+        String totTime = meta[3];
+        String status = meta[4];
+        int progress = meta[5].toInt();
+        String clockTime = meta[6];
+        String clockDate = meta[7];
+
+        if (currentMode == MUSIC) {
+            // Reset scrolling if track changed
+            if (title != currentTitle)
+            {
+              currentTitle = title;
+              titleScroll = 0;
+            }
+            if (artist != currentArtist)
+            {
+              currentArtist = artist;
+              artistScroll = 0;
+            }
+
+            // Draw Progress Bar
+            tft.fillRect(0, 128, progress, 3, COLOR_PROGRESS);
+            if (progress < 128)
+              tft.fillRect(progress, 128, 128 - progress, 3, COLOR_GREY_TRACK);
+
+            while (title.length() < 21)
+              title += " ";
+            while (artist.length() < 21)
+              artist += " ";
+
+            tft.setTextSize(1);
+            tft.setCursor(2, 132);
+            tft.setTextColor(ST77XX_WHITE, ST77XX_BLACK);
+            tft.print(title.substring(0, 21));
+
+            tft.setCursor(2, 142);
+            tft.setTextColor(COLOR_ARTIST, ST77XX_BLACK);
+            tft.print(artist.substring(0, 21));
+
+            tft.setCursor(2, 152);
+            tft.setTextColor(COLOR_TIME, ST77XX_BLACK);
+            tft.print(currTime + " / " + totTime + "   ");
+
+            tft.fillRect(114, 150, 12, 10, ST77XX_BLACK);
+            if (status == "Playing")
+            {
+              tft.fillRect(115, 151, 3, 8, COLOR_PROGRESS);
+              tft.fillRect(121, 151, 3, 8, COLOR_PROGRESS);
+            }
+            else
+            {
+              tft.fillTriangle(115, 151, 115, 159, 123, 155, ST77XX_RED);
+            }
+        }
+        else if (currentMode == CLOCK) {
+            tft.setTextSize(3);
+            tft.setTextColor(COLOR_TIME, ST77XX_BLACK);
+            tft.setCursor(20, 50);
+            tft.print(clockTime);
+
+            tft.setTextSize(1);
+            tft.setTextColor(COLOR_ARTIST, ST77XX_BLACK);
+            tft.setCursor(30, 90);
+            tft.print(clockDate);
+        }
+        else if (currentMode == STATS) {
+            tft.setTextSize(1);
+            tft.setTextColor(ST77XX_WHITE, ST77XX_BLACK);
+            tft.setCursor(5, 10);
+            tft.print("SYSTEM STATS");
+            
+            tft.setTextColor(COLOR_ACCENT, ST77XX_BLACK);
+            tft.setCursor(5, 30);
+            tft.print("IP: ");
+            tft.setTextColor(ST77XX_WHITE, ST77XX_BLACK);
+            tft.print(WiFi.localIP().toString() + "   ");
+
+            tft.setTextColor(COLOR_ACCENT, ST77XX_BLACK);
+            tft.setCursor(5, 50);
+            tft.print("Heap: ");
+            tft.setTextColor(ST77XX_WHITE, ST77XX_BLACK);
+            tft.print(String(ESP.getFreeHeap() / 1024) + " KB   ");
+
+            tft.setTextColor(COLOR_ACCENT, ST77XX_BLACK);
+            tft.setCursor(5, 70);
+            tft.print("Uptime: ");
+            tft.setTextColor(ST77XX_WHITE, ST77XX_BLACK);
+            tft.print(String(millis() / 1000) + " s   ");
+
+            tft.setTextColor(COLOR_ACCENT, ST77XX_BLACK);
+            tft.setCursor(5, 90);
+            tft.print("WiFi: ");
+            tft.setTextColor(ST77XX_WHITE, ST77XX_BLACK);
+            tft.print(String(WiFi.RSSI()) + " dBm   ");
+        }
+      }
+    }
+    break;
+  }
+
+  case WStype_BIN:
+  {
+    // 4096 bytes of pixel data + 1 byte index = 4097
+    if (length == 4097)
+    {
+      uint8_t chunkIndex = payload[0];
+      int y_start = chunkIndex * 16; // 16 rows of pixels per chunk
+
+      // Draw the 16-pixel-tall strip directly to the screen
+      tft.drawRGBBitmap(0, y_start, (uint16_t *)&payload[1], 128, 16);
+    }
+    break;
+  }
+  }
+}
+
+void setup()
+{
   Serial.begin(115200);
   tft.initR(INITR_BLACKTAB);
   tft.setTextWrap(false);
 
   playBootAnimation();
-  fetchAndDisplayPlayer();
+
+  // Connect to discovered server
+  ArduinoOTA.setHostname("quazaar-esp32");
+  ArduinoOTA.begin();
+
+  // Connect to discovered server
+  webSocket.begin(serverIP, serverPort, "/ws");
+  webSocket.onEvent(webSocketEvent);
+  webSocket.setReconnectInterval(5000);
 }
 
-void loop() {
-  unsigned long currentMillis = millis();
-  if (currentMillis - previousMillis >= interval) {
-    previousMillis = currentMillis;
-    fetchAndDisplayPlayer();
+void loop()
+{
+  webSocket.loop();
+  ArduinoOTA.handle();
+
+  // Read Buttons
+  if (millis() - lastBtnPress[0] > DEBOUNCE_DELAY && digitalRead(BTN_PLAY_PAUSE) == LOW) {
+    lastBtnPress[0] = millis();
+    webSocket.sendTXT("{\"type\":\"command\",\"action\":\"play_pause\"}");
+  }
+  if (millis() - lastBtnPress[1] > DEBOUNCE_DELAY && digitalRead(BTN_NEXT) == LOW) {
+    lastBtnPress[1] = millis();
+    webSocket.sendTXT("{\"type\":\"command\",\"action\":\"next\"}");
+  }
+  if (millis() - lastBtnPress[2] > DEBOUNCE_DELAY && digitalRead(BTN_PREV) == LOW) {
+    lastBtnPress[2] = millis();
+    webSocket.sendTXT("{\"type\":\"command\",\"action\":\"prev\"}");
+  }
+  if (millis() - lastBtnPress[3] > DEBOUNCE_DELAY && digitalRead(BTN_FOUR) == LOW) {
+    lastBtnPress[3] = millis();
+    if (currentMode == MUSIC) currentMode = CLOCK;
+    else if (currentMode == CLOCK) currentMode = STATS;
+    else if (currentMode == STATS) currentMode = MUSIC;
+    else currentMode = MUSIC;
+    tft.fillScreen(ST77XX_BLACK);
+  }
+
+  // Send Telemetry to Web Dashboard every 2s
+  if (millis() - lastTelemetry > 2000)
+  {
+    if (webSocket.isConnected())
+    {
+      StaticJsonDocument<200> doc;
+      doc["type"] = "telemetry";
+      doc["uptime"] = millis() / 1000;
+      doc["heap"] = ESP.getFreeHeap();
+
+      String jsonString;
+      serializeJson(doc, jsonString);
+      webSocket.sendTXT(jsonString);
+    }
+    lastTelemetry = millis();
   }
 }

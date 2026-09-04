@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Quazaar Control Center</title>
+    <style>
+        body { font-family: 'Courier New', monospace; background: #0d1117; color: #c9d1d9; padding: 2rem; }
+        .card { background: #161b22; border: 1px solid #30363d; padding: 1.5rem; border-radius: 8px; max-width: 500px; margin: auto; }
+        h2 { color: #58a6ff; text-align: center; }
+        .stat { display: flex; justify-content: space-between; margin: 10px 0; padding: 10px; background: #0d1117; border-radius: 4px;}
+        .val { color: #3fb950; font-weight: bold; }
+        button { background: #238636; color: white; border: none; padding: 10px 20px; cursor: pointer; border-radius: 6px; font-weight: bold; width: 100%; margin-top: 10px;}
+        button.danger { background: #da3633; }
+        .player { text-align: center; margin-top: 20px; }
+        .player img { max-width: 128px; border-radius: 8px; margin-bottom: 10px; }
+        .progress-bar { background: #30363d; height: 10px; border-radius: 5px; margin: 10px 0; overflow: hidden; }
+        .progress-fill { background: #58a6ff; height: 100%; width: 0%; transition: width 0.5s; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h2>Quazaar Telemetry</h2>
+        <div class="stat"><span>Status:</span> <span id="status" class="val" style="color: #f85149;">Disconnected</span></div>
+        <div class="stat"><span>Uptime:</span> <span id="uptime" class="val">0s</span></div>
+        <div class="stat"><span>Free Heap:</span> <span id="heap" class="val">0 KB</span></div>
+        
+        <hr style="border: 1px solid #30363d; margin: 20px 0;">
+        <div class="player">
+            <img id="dashArt" src="" alt="Album Art" style="display:none;">
+            <div id="dashTitle" style="font-weight:bold; color:white;">Not Playing</div>
+            <div id="dashArtist" style="color:#8b949e; font-size: 0.9em;">-</div>
+            <div class="progress-bar"><div id="dashProgress" class="progress-fill"></div></div>
+            <div id="dashTime" style="font-size: 0.8em; color:#8b949e;">00:00 / 00:00</div>
+        </div>
+
+        <hr style="border: 1px solid #30363d; margin: 20px 0;">
+        <button onclick="sendCommand('ping')">Ping Device</button>
+        <button class="danger" onclick="sendCommand('reboot')">Restart ESP32</button>
+        <hr style="border: 1px solid #30363d; margin: 20px 0;">
+        <h3>Set Wallpaper</h3>
+        <input type="file" id="imageInput" accept="image/*" style="width: 100%; margin-bottom: 10px;">
+        <button onclick="sendImage()">Set Wallpaper (5s)</button>
+    </div>
+    <script>
+        const ws = new WebSocket("ws://" + location.host + "/ws");
+        ws.onopen = () => document.getElementById("status").style.color = "#3fb950";
+        ws.onclose = () => document.getElementById("status").style.color = "#f85149";
+        ws.onmessage = (event) => {
+            if (typeof event.data === "string") {
+                if (event.data.startsWith("{")) {
+                    const data = JSON.parse(event.data);
+                    if (data.type === "telemetry") {
+                        document.getElementById("status").innerText = "Online";
+                        document.getElementById("uptime").innerText = data.uptime + "s";
+                        document.getElementById("heap").innerText = (data.heap / 1024).toFixed(2) + " KB";
+                    } else if (data.type === "artwork") {
+                        fetch("/artwork").then(r => r.text()).then(b64 => {
+                            const img = document.getElementById("dashArt");
+                            img.src = b64;
+                            img.style.display = "inline";
+                        });
+                    }
+                } else {
+                    const lines = event.data.split('\n');
+                    if (lines.length >= 6) {
+                        document.getElementById("dashTitle").innerText = lines[0];
+                        document.getElementById("dashArtist").innerText = lines[1];
+                        document.getElementById("dashTime").innerText = lines[2] + " / " + lines[3];
+                        document.getElementById("dashProgress").style.width = (parseInt(lines[5]) / 128 * 100) + "%";
+                    }
+                }
+            }
+        };
+        function sendCommand(cmd) { ws.send(JSON.stringify({ type: "command", action: cmd })); }
+        function sendImage() {
+            const file = document.getElementById("imageInput").files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                ws.send(JSON.stringify({ type: "wallpaper", image: e.target.result }));
+            };
+            reader.readAsDataURL(file);
+        }
+    </script>
+</body>
+</html>
