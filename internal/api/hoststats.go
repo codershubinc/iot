@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"strconv"
 	"time"
 
 	"codersshubinc/quazaar-iot/internal/hub"
@@ -105,6 +106,50 @@ func getCPU() string {
 	return "Unknown"
 }
 
+var lastRx, lastTx uint64
+var firstNetRun = true
+
+func getNetSpeeds() (string, string) {
+	b, err := os.ReadFile("/proc/net/dev")
+	if err != nil { return "0B/s", "0B/s" }
+	
+	lines := strings.Split(string(b), "\n")
+	var rx, tx uint64
+	for _, line := range lines {
+		if strings.Contains(line, "wlan0:") || strings.Contains(line, "eth0:") || strings.Contains(line, "wlp") || strings.Contains(line, "enp") {
+			parts := strings.Fields(line)
+			if len(parts) >= 10 {
+				r, _ := strconv.ParseUint(parts[1], 10, 64)
+				t, _ := strconv.ParseUint(parts[9], 10, 64)
+				rx += r
+				tx += t
+			}
+		}
+	}
+	
+	rxDiff := rx - lastRx
+	txDiff := tx - lastTx
+	lastRx = rx
+	lastTx = tx
+	
+	formatSpeed := func(bytes uint64) string {
+		bytes /= 2 // 2 second interval
+		if bytes > 1024*1024 {
+			return fmt.Sprintf("%.1fM/s", float64(bytes)/(1024*1024))
+		} else if bytes > 1024 {
+			return fmt.Sprintf("%dK/s", bytes/1024)
+		}
+		return fmt.Sprintf("%dB/s", bytes)
+	}
+	
+	if firstNetRun {
+		firstNetRun = false
+		return "0B/s", "0B/s"
+	}
+	
+	return formatSpeed(rxDiff), formatSpeed(txDiff)
+}
+
 func getStorage() string {
 	req, _ := http.NewRequest("GET", "http://localhost:8080/api/system/storage", nil)
 	req.Header.Set("Authorization", "Bearer "+storageToken)
@@ -138,6 +183,7 @@ func PollHostStats(h *hub.Hub) {
 		kernel := getKernel()
 		uptime := getUptime()
 		storage := getStorage()
+		down, up := getNetSpeeds()
 
 		// Max 21 chars for ESP32 formatting safely
 		if len(osName) > 20 { osName = osName[:20] }
@@ -151,6 +197,8 @@ func PollHostStats(h *hub.Hub) {
 			"storage": storage,
 			"cpu":     getCPU(),
 			"ram":     getRAM(),
+			"net_down": down,
+			"net_up":   up,
 		}
 		
 		b, _ := json.Marshal(payload)

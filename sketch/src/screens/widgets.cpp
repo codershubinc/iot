@@ -39,7 +39,7 @@ void drawBluetoothBadge() {
         }
         
         tft.setTextSize(1);
-        uint16_t battColor = COLOR_PROGRESS;
+        uint16_t battColor = gThemeColor;
         if (gBtBattery <= 20) battColor = ST77XX_RED;
         else if (gBtBattery <= 50) battColor = COLOR_TIME;
         
@@ -57,8 +57,8 @@ void drawPlayPauseIcon() {
         tft.fillCircle(115, 147, 9, COLOR_DARK_GREY);
         
         if (gStatus == "Playing") {
-            tft.fillRect(112, 144, 2, 7, COLOR_PROGRESS);
-            tft.fillRect(116, 144, 2, 7, COLOR_PROGRESS);
+            tft.fillRect(112, 144, 2, 7, gThemeColor);
+            tft.fillRect(116, 144, 2, 7, gThemeColor);
         } else {
             tft.fillTriangle(113, 143, 113, 151, 119, 147, ST77XX_WHITE);
         }

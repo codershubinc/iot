@@ -13,7 +13,7 @@ void drawMusicScreen() {
 
     int progWidth = (gProgress * 118) / 128;
     if (progWidth > 0) {
-        tft.fillRoundRect(5, 131, progWidth, 4, 2, COLOR_PROGRESS);
+        tft.fillRoundRect(5, 131, progWidth, 4, 2, gThemeColor);
     }
 
     String tTitle = gTitle;
@@ -27,7 +27,7 @@ void drawMusicScreen() {
     tft.print(tTitle.substring(0, 16));
 
     tft.setCursor(5, 150);
-    tft.setTextColor(COLOR_ARTIST, ST77XX_BLACK);
+    tft.setTextColor(gThemeColor, ST77XX_BLACK);
     tft.print(tArtist.substring(0, 16));
 
     drawBluetoothBadge();

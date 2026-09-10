@@ -35,6 +35,8 @@ void webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
         gServerStorage = doc["storage"].as<String>();
         gServerCPU = doc["cpu"].as<String>();
         gServerRAM = doc["ram"].as<String>();
+        gNetDown = doc["net_down"].as<String>();
+        gNetUp = doc["net_up"].as<String>();
         if (currentMode == SERVER)
           drawCurrentScreen();
       }
@@ -87,7 +89,7 @@ void webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
 
       int linesFound = 0;
       int lastPos = 0;
-      String meta[8];
+      String meta[9];
 
       for (size_t i = 0; i < length; i++)
       {
@@ -99,12 +101,12 @@ void webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
           }
           linesFound++;
           lastPos = i + 1;
-          if (linesFound == 8)
+          if (linesFound == 9)
             break;
         }
       }
 
-      if (linesFound == 8)
+      if (linesFound == 9)
       {
         gTitle = meta[0];
         gArtist = meta[1];
@@ -113,6 +115,7 @@ void webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
         gStatus = meta[4];
         gProgress = meta[5].toInt();
         gClockTime = meta[6];
+        gThemeColor = meta[8].toInt();
         gClockDate = meta[7];
 
         drawCurrentScreen();

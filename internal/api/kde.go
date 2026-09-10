@@ -33,6 +33,7 @@ func PollMusicData(h *hub.Hub) {
 	apiURL := "http://localhost:8765/api/v0.1/player/info?deviceId=$2a$10$uUTyLFod9cOuC7KHbuxr4O7Mpz2WRVnRI7VkOYsdSDeHw72UOMtNm"
 	var lastArtwork string
 	idleCounter := 0
+	var lastValidData KDEAPIResponse
 
 	for {
 		time.Sleep(1 * time.Second)
@@ -48,6 +49,13 @@ func PollMusicData(h *hub.Hub) {
 			continue
 		}
 		resp.Body.Close()
+
+		if apiData.Player.Title != "" {
+			lastValidData = apiData
+		} else if lastValidData.Player.Title != "" {
+			apiData = lastValidData
+			apiData.Player.Status = "Paused"
+		}
 
 		state.WallpaperMu.Lock()
 		isWall := state.WallpaperMode
@@ -77,7 +85,7 @@ func PollMusicData(h *hub.Hub) {
 		timeStr := time.Now().Format("15:04:05")
 		dateStr := time.Now().Format("Mon, Jan 2")
 
-		payloadText := fmt.Sprintf("%s\n%s\n%s\n%s\n%s\n%d\n%s\n%s\n",
+		payloadText := fmt.Sprintf("%s\n%s\n%s\n%s\n%s\n%d\n%s\n%s\n%d\n",
 			apiData.Player.Title,
 			apiData.Player.Artist,
 			timeutil.FormatTime(apiData.Player.Position),
@@ -86,6 +94,7 @@ func PollMusicData(h *hub.Hub) {
 			progressWidth,
 			timeStr,
 			dateStr,
+			state.ThemeColor,
 		)
 		h.BroadcastText([]byte(payloadText), nil)
 

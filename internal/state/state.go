@@ -7,4 +7,5 @@ var (
 	WallpaperMu          sync.Mutex
 	ForceRedraw          bool
 	CurrentArtworkBase64 string
+	ThemeColor           uint16
 )
