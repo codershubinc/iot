@@ -29,6 +29,11 @@
             <div id="dashTitle" style="font-weight:bold; color:white;">Not Playing</div>
             <div id="dashArtist" style="color:#8b949e; font-size: 0.9em;">-</div>
             <div class="progress-bar"><div id="dashProgress" class="progress-fill"></div></div>
+            <div style="margin: 15px 0; display: flex; justify-content: space-around;">
+                <button style="width:30%; background:#21262d; margin-top:0;" onclick="sendCommand('prev')">⏮ Prev</button>
+                <button style="width:30%; background:#238636; margin-top:0;" onclick="sendCommand('play_pause')">⏯ Play/Pause</button>
+                <button style="width:30%; background:#21262d; margin-top:0;" onclick="sendCommand('next')">Next ⏭</button>
+            </div>
             <div id="dashTime" style="font-size: 0.8em; color:#8b949e;">00:00 / 00:00</div>
         </div>
 

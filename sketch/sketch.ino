@@ -53,6 +53,108 @@ unsigned long lastScrollTime = 0;
 unsigned long lastBtnPress[4] = {0, 0, 0, 0};
 const int DEBOUNCE_DELAY = 300;
 
+
+// Global state for instant screen cycling
+String gTitle = "";
+String gArtist = "";
+String gCurrTime = "00:00";
+String gTotTime = "00:00";
+String gStatus = "";
+int gProgress = 0;
+String gClockTime = "00:00";
+String gClockDate = "";
+
+void drawCurrentScreen() {
+    if (currentMode == MUSIC) {
+        // Reset scrolling if track changed
+        if (gTitle != currentTitle)
+        {
+          currentTitle = gTitle;
+          titleScroll = 0;
+        }
+        if (gArtist != currentArtist)
+        {
+          currentArtist = gArtist;
+          artistScroll = 0;
+        }
+
+        // Draw Progress Bar
+        tft.fillRect(0, 128, gProgress, 3, COLOR_PROGRESS);
+        if (gProgress < 128)
+          tft.fillRect(gProgress, 128, 128 - gProgress, 3, COLOR_GREY_TRACK);
+
+        String tTitle = gTitle;
+        String tArtist = gArtist;
+        while (tTitle.length() < 21) tTitle += " ";
+        while (tArtist.length() < 21) tArtist += " ";
+
+        tft.setTextSize(1);
+        tft.setCursor(2, 132);
+        tft.setTextColor(ST77XX_WHITE, ST77XX_BLACK);
+        tft.print(tTitle.substring(0, 21));
+
+        tft.setCursor(2, 142);
+        tft.setTextColor(COLOR_ARTIST, ST77XX_BLACK);
+        tft.print(tArtist.substring(0, 21));
+
+        tft.setCursor(2, 152);
+        tft.setTextColor(COLOR_TIME, ST77XX_BLACK);
+        tft.print(gCurrTime + " / " + gTotTime + "   ");
+
+        tft.fillRect(114, 150, 12, 10, ST77XX_BLACK);
+        if (gStatus == "Playing")
+        {
+          tft.fillRect(115, 151, 3, 8, COLOR_PROGRESS);
+          tft.fillRect(121, 151, 3, 8, COLOR_PROGRESS);
+        }
+        else
+        {
+          tft.fillTriangle(115, 151, 115, 159, 123, 155, ST77XX_RED);
+        }
+    }
+    else if (currentMode == CLOCK) {
+        tft.setTextSize(3);
+        tft.setTextColor(COLOR_TIME, ST77XX_BLACK);
+        tft.setCursor(20, 50);
+        tft.print(gClockTime);
+
+        tft.setTextSize(1);
+        tft.setTextColor(COLOR_ARTIST, ST77XX_BLACK);
+        tft.setCursor(30, 90);
+        tft.print(gClockDate);
+    }
+    else if (currentMode == STATS) {
+        tft.setTextSize(1);
+        tft.setTextColor(ST77XX_WHITE, ST77XX_BLACK);
+        tft.setCursor(5, 10);
+        tft.print("SYSTEM STATS");
+        
+        tft.setTextColor(COLOR_ACCENT, ST77XX_BLACK);
+        tft.setCursor(5, 30);
+        tft.print("IP: ");
+        tft.setTextColor(ST77XX_WHITE, ST77XX_BLACK);
+        tft.print(WiFi.localIP().toString() + "   ");
+
+        tft.setTextColor(COLOR_ACCENT, ST77XX_BLACK);
+        tft.setCursor(5, 50);
+        tft.print("Heap: ");
+        tft.setTextColor(ST77XX_WHITE, ST77XX_BLACK);
+        tft.print(String(ESP.getFreeHeap() / 1024) + " KB   ");
+
+        tft.setTextColor(COLOR_ACCENT, ST77XX_BLACK);
+        tft.setCursor(5, 70);
+        tft.print("Uptime: ");
+        tft.setTextColor(ST77XX_WHITE, ST77XX_BLACK);
+        tft.print(String(millis() / 1000) + " s   ");
+
+        tft.setTextColor(COLOR_ACCENT, ST77XX_BLACK);
+        tft.setCursor(5, 90);
+        tft.print("WiFi: ");
+        tft.setTextColor(ST77XX_WHITE, ST77XX_BLACK);
+        tft.print(String(WiFi.RSSI()) + " dBm   ");
+    }
+}
+
 void playBootAnimation()
 {
   pinMode(BTN_PLAY_PAUSE, INPUT_PULLUP);
@@ -175,7 +277,9 @@ void webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
 
   case WStype_CONNECTED:
     Serial.println("[WS] Connected!");
+    currentMode = MUSIC;
     tft.fillScreen(ST77XX_BLACK); // Clear the boot screen
+    webSocket.sendTXT("{\"type\":\"command\",\"action\":\"refresh_art\"}");
     break;
 
   case WStype_TEXT:
@@ -237,103 +341,16 @@ void webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
 
       if (linesFound == 8)
       {
-        String title = meta[0];
-        String artist = meta[1];
-        String currTime = meta[2];
-        String totTime = meta[3];
-        String status = meta[4];
-        int progress = meta[5].toInt();
-        String clockTime = meta[6];
-        String clockDate = meta[7];
+        gTitle = meta[0];
+        gArtist = meta[1];
+        gCurrTime = meta[2];
+        gTotTime = meta[3];
+        gStatus = meta[4];
+        gProgress = meta[5].toInt();
+        gClockTime = meta[6];
+        gClockDate = meta[7];
 
-        if (currentMode == MUSIC) {
-            // Reset scrolling if track changed
-            if (title != currentTitle)
-            {
-              currentTitle = title;
-              titleScroll = 0;
-            }
-            if (artist != currentArtist)
-            {
-              currentArtist = artist;
-              artistScroll = 0;
-            }
-
-            // Draw Progress Bar
-            tft.fillRect(0, 128, progress, 3, COLOR_PROGRESS);
-            if (progress < 128)
-              tft.fillRect(progress, 128, 128 - progress, 3, COLOR_GREY_TRACK);
-
-            while (title.length() < 21)
-              title += " ";
-            while (artist.length() < 21)
-              artist += " ";
-
-            tft.setTextSize(1);
-            tft.setCursor(2, 132);
-            tft.setTextColor(ST77XX_WHITE, ST77XX_BLACK);
-            tft.print(title.substring(0, 21));
-
-            tft.setCursor(2, 142);
-            tft.setTextColor(COLOR_ARTIST, ST77XX_BLACK);
-            tft.print(artist.substring(0, 21));
-
-            tft.setCursor(2, 152);
-            tft.setTextColor(COLOR_TIME, ST77XX_BLACK);
-            tft.print(currTime + " / " + totTime + "   ");
-
-            tft.fillRect(114, 150, 12, 10, ST77XX_BLACK);
-            if (status == "Playing")
-            {
-              tft.fillRect(115, 151, 3, 8, COLOR_PROGRESS);
-              tft.fillRect(121, 151, 3, 8, COLOR_PROGRESS);
-            }
-            else
-            {
-              tft.fillTriangle(115, 151, 115, 159, 123, 155, ST77XX_RED);
-            }
-        }
-        else if (currentMode == CLOCK) {
-            tft.setTextSize(3);
-            tft.setTextColor(COLOR_TIME, ST77XX_BLACK);
-            tft.setCursor(20, 50);
-            tft.print(clockTime);
-
-            tft.setTextSize(1);
-            tft.setTextColor(COLOR_ARTIST, ST77XX_BLACK);
-            tft.setCursor(30, 90);
-            tft.print(clockDate);
-        }
-        else if (currentMode == STATS) {
-            tft.setTextSize(1);
-            tft.setTextColor(ST77XX_WHITE, ST77XX_BLACK);
-            tft.setCursor(5, 10);
-            tft.print("SYSTEM STATS");
-            
-            tft.setTextColor(COLOR_ACCENT, ST77XX_BLACK);
-            tft.setCursor(5, 30);
-            tft.print("IP: ");
-            tft.setTextColor(ST77XX_WHITE, ST77XX_BLACK);
-            tft.print(WiFi.localIP().toString() + "   ");
-
-            tft.setTextColor(COLOR_ACCENT, ST77XX_BLACK);
-            tft.setCursor(5, 50);
-            tft.print("Heap: ");
-            tft.setTextColor(ST77XX_WHITE, ST77XX_BLACK);
-            tft.print(String(ESP.getFreeHeap() / 1024) + " KB   ");
-
-            tft.setTextColor(COLOR_ACCENT, ST77XX_BLACK);
-            tft.setCursor(5, 70);
-            tft.print("Uptime: ");
-            tft.setTextColor(ST77XX_WHITE, ST77XX_BLACK);
-            tft.print(String(millis() / 1000) + " s   ");
-
-            tft.setTextColor(COLOR_ACCENT, ST77XX_BLACK);
-            tft.setCursor(5, 90);
-            tft.print("WiFi: ");
-            tft.setTextColor(ST77XX_WHITE, ST77XX_BLACK);
-            tft.print(String(WiFi.RSSI()) + " dBm   ");
-        }
+        drawCurrentScreen();
       }
     }
     break;
@@ -395,9 +412,16 @@ void loop()
     lastBtnPress[3] = millis();
     if (currentMode == MUSIC) currentMode = CLOCK;
     else if (currentMode == CLOCK) currentMode = STATS;
-    else if (currentMode == STATS) currentMode = MUSIC;
-    else currentMode = MUSIC;
+    else if (currentMode == STATS) {
+      currentMode = MUSIC;
+      webSocket.sendTXT("{\"type\":\"command\",\"action\":\"refresh_art\"}");
+    }
+    else {
+      currentMode = MUSIC;
+      webSocket.sendTXT("{\"type\":\"command\",\"action\":\"refresh_art\"}");
+    }
     tft.fillScreen(ST77XX_BLACK);
+    drawCurrentScreen();
   }
 
   // Send Telemetry to Web Dashboard every 2s

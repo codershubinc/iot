@@ -127,7 +127,7 @@ func PollMusicData(h *hub.Hub) {
 				frame = append(frame, rgb565Data[start:end]...)
 
 				h.BroadcastBinary(frame)
-				time.Sleep(50 * time.Millisecond)
+				
 			}
 		}
 	}

@@ -63,6 +63,10 @@ func HandleWebSocket(h *hub.Hub, w http.ResponseWriter, r *http.Request) {
 							if state.CurrentArtworkBase64 != "" {
 								go imageutil.HandleWallpaper(h, state.CurrentArtworkBase64)
 							}
+						case "refresh_art":
+							state.WallpaperMu.Lock()
+							state.ForceRedraw = true
+							state.WallpaperMu.Unlock()
 						}
 					}
 				}
