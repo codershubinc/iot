@@ -18,6 +18,9 @@ func main() {
 	}
 
 	go api.PollMusicData(h)
+	go api.PollHostStats(h)
+	go api.PollWeather(h)
+	go api.PollBluetooth(h)
 
 	server.SetupHTTP(h, port)
 }

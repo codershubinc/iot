@@ -74,7 +74,7 @@ func PollMusicData(h *hub.Hub) {
 		if progressWidth > 128 {
 			progressWidth = 128
 		}
-		timeStr := time.Now().Format("15:04")
+		timeStr := time.Now().Format("15:04:05")
 		dateStr := time.Now().Format("Mon, Jan 2")
 
 		payloadText := fmt.Sprintf("%s\n%s\n%s\n%s\n%s\n%d\n%s\n%s\n",

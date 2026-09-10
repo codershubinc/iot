@@ -59,6 +59,12 @@ func HandleWebSocket(h *hub.Hub, w http.ResponseWriter, r *http.Request) {
 							exec.Command("playerctl", "next").Start()
 						case "prev":
 							exec.Command("playerctl", "previous").Start()
+						case "vol_up":
+							exec.Command("wpctl", "set-volume", "@DEFAULT_AUDIO_SINK@", "5%+").Start()
+						case "vol_down":
+							exec.Command("wpctl", "set-volume", "@DEFAULT_AUDIO_SINK@", "5%-").Start()
+						case "mute":
+							exec.Command("wpctl", "set-mute", "@DEFAULT_AUDIO_SINK@", "toggle").Start()
 						case "fullscreen_art":
 							if state.CurrentArtworkBase64 != "" {
 								go imageutil.HandleWallpaper(h, state.CurrentArtworkBase64)
