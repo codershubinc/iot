@@ -16,6 +16,26 @@ void drawMusicScreen() {
         tft.fillRoundRect(5, 131, progWidth, 4, 2, gThemeColor);
     }
 
+    String tTot = gTotTime;
+    String tCurr = gCurrTime;
+    if (tTot == "" || tTot == "00:00") tTot = "-:-";
+    if (tCurr == "" || tCurr == "00:00") {
+        if (tTot == "-:-") tCurr = "-:-";
+    }
+
+    tft.setTextSize(1);
+    tft.setTextColor(ST77XX_WHITE, ST77XX_BLACK);
+    
+    String leftStr = tCurr;
+    while (leftStr.length() < 5) leftStr += " ";
+    tft.setCursor(5, 120);
+    tft.print(leftStr);
+
+    String rightStr = tTot;
+    while (rightStr.length() < 5) rightStr = " " + rightStr;
+    tft.setCursor(123 - (rightStr.length() * 6), 120);
+    tft.print(rightStr);
+
     String tTitle = gTitle;
     String tArtist = gArtist;
     while (tTitle.length() < 17) tTitle += " ";

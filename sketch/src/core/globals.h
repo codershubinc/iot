@@ -32,14 +32,16 @@ extern int gProgress;
 
 extern String gClockTime;
 extern String gClockDate;
-extern String gServerOS;
-extern String gServerKernel;
 extern String gServerUptime;
 extern String gServerStorage;
 extern String gServerCPU;
 extern String gServerRAM;
 extern String gNetDown;
 extern String gNetUp;
+extern String gServerGPU;
+extern String gServerGpuPower;
+extern String gServerCpuTemp;
+extern String gServerFan;
 extern String gWeather;
 extern bool gNeedsFullRedraw;
 extern int gBtBattery;

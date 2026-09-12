@@ -29,14 +29,16 @@ void webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
 
       if (!error && doc["type"] == "server_stats")
       {
-        gServerOS = doc["os"].as<String>();
-        gServerKernel = doc["kernel"].as<String>();
-        gServerUptime = doc["uptime"].as<String>();
+                gServerUptime = doc["uptime"].as<String>();
         gServerStorage = doc["storage"].as<String>();
         gServerCPU = doc["cpu"].as<String>();
         gServerRAM = doc["ram"].as<String>();
         gNetDown = doc["net_down"].as<String>();
         gNetUp = doc["net_up"].as<String>();
+        gServerGPU = doc["gpu"].as<String>();
+        gServerGpuPower = doc["gpu_power"].as<String>();
+        gServerCpuTemp = doc["cpu_temp"].as<String>();
+        gServerFan = doc["fan"].as<String>();
         if (currentMode == SERVER)
           drawCurrentScreen();
       }
