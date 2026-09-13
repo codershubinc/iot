@@ -132,8 +132,14 @@ void loop()
   if (!isSleeping && millis() - lastPlayingTime > 300000) {
     isSleeping = true;
     tft.fillScreen(TFT_BLACK);
-    if (dynamicScreensaver != nullptr) {
-      tft.pushImage(0, 0, 128, 128, dynamicScreensaver);
+    
+    bool hasAllChunks = true;
+    for (int i=0; i<8; i++) if (dynamicScreensaverChunks[i] == nullptr) hasAllChunks = false;
+    
+    if (hasAllChunks) {
+      for (int i=0; i<8; i++) {
+         tft.pushImage(0, i * 16, 128, 16, (uint16_t*)dynamicScreensaverChunks[i]);
+      }
     } else {
       tft.pushImage(0, 0, 128, 128, screensaver_img);
     }

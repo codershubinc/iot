@@ -45,5 +45,5 @@ bool gBtConnected = false;
 bool gNeedsBadgeRedraw = true;
 bool isSleeping = false;
 bool isUploadingScreensaver = false;
-uint16_t* dynamicScreensaver = nullptr;
+uint8_t* dynamicScreensaverChunks[8] = {nullptr};
 int currentClockStyle = 0;

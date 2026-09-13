@@ -50,7 +50,8 @@ extern bool gBtConnected;
 extern bool gNeedsBadgeRedraw;
 extern bool isSleeping;
 extern bool isUploadingScreensaver;
-extern uint16_t* dynamicScreensaver;
+extern uint8_t* dynamicScreensaverChunks[8];
 
 #endif
 extern int currentClockStyle;
+extern const uint16_t screensaver_img[16384];

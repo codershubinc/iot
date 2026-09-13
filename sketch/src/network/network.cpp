@@ -93,13 +93,23 @@ void webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
           currentMode = WALLPAPER;
         } else if (doc["action"] == "upload_screensaver") {
           isUploadingScreensaver = true;
-          if (dynamicScreensaver == nullptr) {
-            if (psramFound()) {
-                dynamicScreensaver = (uint16_t*)ps_malloc(32768);
+          for (int i = 0; i < 8; i++) {
+            if (dynamicScreensaverChunks[i] == nullptr) {
+              dynamicScreensaverChunks[i] = (uint8_t*)malloc(4096);
             }
-            if (dynamicScreensaver == nullptr) {
-                dynamicScreensaver = (uint16_t*)malloc(32768);
+          }
+        } else if (doc["action"] == "test_sleep") {
+          isSleeping = true;
+          tft.fillScreen(TFT_BLACK);
+          bool hasAllChunks = true;
+          for (int i=0; i<8; i++) if (dynamicScreensaverChunks[i] == nullptr) hasAllChunks = false;
+          
+          if (hasAllChunks) {
+            for (int i=0; i<8; i++) {
+               tft.pushImage(0, i * 16, 128, 16, (uint16_t*)dynamicScreensaverChunks[i]);
             }
+          } else {
+            tft.pushImage(0, 0, 128, 128, screensaver_img);
           }
         }
       }
@@ -151,9 +161,11 @@ void webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
   case WStype_BIN:
   {
     if (isUploadingScreensaver) {
-      if (length == 4097 && dynamicScreensaver != nullptr) {
+      if (length == 4097) {
         uint8_t chunkIndex = payload[0];
-        memcpy((uint8_t*)dynamicScreensaver + (chunkIndex * 4096), &payload[1], 4096);
+        if (chunkIndex < 8 && dynamicScreensaverChunks[chunkIndex] != nullptr) {
+          memcpy(dynamicScreensaverChunks[chunkIndex], &payload[1], 4096);
+        }
         if (chunkIndex == 7) {
           isUploadingScreensaver = false; // Done!
         }
@@ -161,15 +173,19 @@ void webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
       break;
     }
 
-    if (currentMode != MUSIC)
+    if (currentMode != MUSIC && currentMode != WALLPAPER)
       break; // Do not draw artwork over other screens!
     
     if (length == 4097)
     {
       uint8_t chunkIndex = payload[0];
       int y_start = chunkIndex * 16;
+      
+      // Fix LoadStoreAlignmentException by copying to an aligned buffer first!
+      uint16_t alignedBuffer[2048];
+      memcpy(alignedBuffer, &payload[1], 4096);
 
-      tft.pushImage(0, y_start, 128, 16, (uint16_t *)&payload[1]);
+      tft.pushImage(0, y_start, 128, 16, alignedBuffer);
 
       if (chunkIndex == 0)
         maskCornersTop(12, TFT_BLACK);
