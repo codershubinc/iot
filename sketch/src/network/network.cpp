@@ -70,15 +70,32 @@ void webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
         {
           ESP.restart();
         }
-        else if (doc["action"] == "clear")
-        {
+        else if (doc["action"] == "clear") {
           tft.fillScreen(ST77XX_BLACK);
           currentMode = MUSIC;
+        } else if (doc["action"] == "set_screen_music") {
+          currentMode = MUSIC; tft.fillScreen(ST77XX_BLACK); gNeedsFullRedraw = true; drawCurrentScreen();
+        } else if (doc["action"] == "set_screen_clock") {
+          currentMode = CLOCK; tft.fillScreen(ST77XX_BLACK); gNeedsFullRedraw = true; drawCurrentScreen();
+        } else if (doc["action"] == "set_screen_stats") {
+          currentMode = STATS; tft.fillScreen(ST77XX_BLACK); gNeedsFullRedraw = true; drawCurrentScreen();
+        } else if (doc["action"] == "set_screen_server") {
+          currentMode = SERVER; tft.fillScreen(ST77XX_BLACK); gNeedsFullRedraw = true; drawCurrentScreen();
+        } else if (doc["action"] == "set_clock_0") {
+          currentClockStyle = 0; if(currentMode==CLOCK){tft.fillScreen(ST77XX_BLACK); gNeedsFullRedraw=true; drawCurrentScreen();}
+        } else if (doc["action"] == "set_clock_1") {
+          currentClockStyle = 1; if(currentMode==CLOCK){tft.fillScreen(ST77XX_BLACK); gNeedsFullRedraw=true; drawCurrentScreen();}
+        } else if (doc["action"] == "set_clock_2") {
+          currentClockStyle = 2; if(currentMode==CLOCK){tft.fillScreen(ST77XX_BLACK); gNeedsFullRedraw=true; drawCurrentScreen();}
         }
-        else if (doc["action"] == "wallpaper")
-        {
+        else if (doc["action"] == "wallpaper") {
           tft.fillScreen(ST77XX_BLACK);
           currentMode = WALLPAPER;
+        } else if (doc["action"] == "upload_screensaver") {
+          isUploadingScreensaver = true;
+          if (dynamicScreensaver == nullptr) {
+            dynamicScreensaver = (uint16_t*)malloc(32768);
+          }
         }
       }
     }
@@ -128,8 +145,20 @@ void webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
 
   case WStype_BIN:
   {
+    if (isUploadingScreensaver) {
+      if (length == 4097 && dynamicScreensaver != nullptr) {
+        uint8_t chunkIndex = payload[0];
+        memcpy((uint8_t*)dynamicScreensaver + (chunkIndex * 4096), &payload[1], 4096);
+        if (chunkIndex == 7) {
+          isUploadingScreensaver = false; // Done!
+        }
+      }
+      break;
+    }
+
     if (currentMode != MUSIC)
       break; // Do not draw artwork over other screens!
+    
     if (length == 4097)
     {
       uint8_t chunkIndex = payload[0];

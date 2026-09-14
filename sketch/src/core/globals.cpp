@@ -44,3 +44,6 @@ uint16_t gThemeColor = 0x07E0;
 bool gBtConnected = false;
 bool gNeedsBadgeRedraw = true;
 bool isSleeping = false;
+bool isUploadingScreensaver = false;
+uint16_t* dynamicScreensaver = nullptr;
+int currentClockStyle = 0;

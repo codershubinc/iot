@@ -49,5 +49,8 @@ extern uint16_t gThemeColor;
 extern bool gBtConnected;
 extern bool gNeedsBadgeRedraw;
 extern bool isSleeping;
+extern bool isUploadingScreensaver;
+extern uint16_t* dynamicScreensaver;
 
 #endif
+extern int currentClockStyle;

@@ -10,6 +10,7 @@
 #include "screens/display.h"
 #include "screens/boot.h"
 #include "network/network.h"
+#include "screens/screensaver_img.h"
 
 unsigned long lastTelemetry = 0;
 
@@ -119,10 +120,15 @@ void loop()
     }
   }
 
-  // Sleep after 5 minutes of inactivity (300,000 ms)
+  // Screensaver after 5 minutes of inactivity (300,000 ms)
   if (!isSleeping && millis() - lastPlayingTime > 300000) {
     isSleeping = true;
     tft.fillScreen(ST77XX_BLACK);
+    if (dynamicScreensaver != nullptr) {
+      tft.drawRGBBitmap(0, 0, dynamicScreensaver, 128, 128);
+    } else {
+      tft.drawRGBBitmap(0, 0, screensaver_img, 128, 128);
+    }
   }
 
   // Process Buttons
@@ -140,6 +146,8 @@ void loop()
       doc["type"] = "telemetry";
       doc["uptime"] = millis() / 1000;
       doc["heap"] = ESP.getFreeHeap();
+      doc["screen"] = currentMode == MUSIC ? "Music" : currentMode == CLOCK ? "Clock" : currentMode == STATS ? "ESP Stats" : "Host Server";
+      doc["clock_style"] = currentClockStyle;
 
       String jsonString;
       serializeJson(doc, jsonString);

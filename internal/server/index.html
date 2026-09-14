@@ -20,6 +20,7 @@
     <div class="card">
         <h2>Quazaar Telemetry</h2>
         <div class="stat"><span>Status:</span> <span id="status" class="val" style="color: #f85149;">Disconnected</span></div>
+        <div class="stat"><span>Active Screen:</span> <span id="screen" class="val" style="color: #58a6ff;">Unknown</span></div>
         <div class="stat"><span>Uptime:</span> <span id="uptime" class="val">0s</span></div>
         <div class="stat"><span>Free Heap:</span> <span id="heap" class="val">0 KB</span></div>
         
@@ -38,12 +39,31 @@
         </div>
 
         <hr style="border: 1px solid #30363d; margin: 20px 0;">
+        <hr style="border: 1px solid #30363d; margin: 20px 0;">
+        <h3>ESP32 Display Control</h3>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+            <button onclick="sendCommand('set_screen_music')" style="background: #1f6feb;">🎵 Music</button>
+            <button onclick="sendCommand('set_screen_clock')" style="background: #1f6feb;">🕒 Clock</button>
+            <button onclick="sendCommand('set_screen_stats')" style="background: #1f6feb;">📊 ESP Stats</button>
+            <button onclick="sendCommand('set_screen_server')" style="background: #1f6feb;">💻 Host Stats</button>
+        </div>
+        
+        <h3 style="margin-top: 20px;">Clock Styles</h3>
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px;">
+            <button onclick="sendCommand('set_clock_0')" style="background: #8957e5;">Classic</button>
+            <button onclick="sendCommand('set_clock_1')" style="background: #8957e5;">Minimal</button>
+            <button onclick="sendCommand('set_clock_2')" style="background: #8957e5;">Tech</button>
+        </div>
+        <hr style="border: 1px solid #30363d; margin: 20px 0;">
         <button onclick="sendCommand('ping')">Ping Device</button>
         <button class="danger" onclick="sendCommand('reboot')">Restart ESP32</button>
         <hr style="border: 1px solid #30363d; margin: 20px 0;">
         <h3>Set Wallpaper</h3>
         <input type="file" id="imageInput" accept="image/*" style="width: 100%; margin-bottom: 10px;">
         <button onclick="sendImage()">Set Wallpaper (5s)</button>
+        <h3 style="margin-top: 20px;">Set Screensaver</h3>
+        <input type="file" id="screensaverInput" accept="image/*" style="width: 100%; margin-bottom: 10px;">
+        <button onclick="sendScreensaver()" style="background: #a371f7;">Upload Screensaver</button>
     </div>
     <script>
         const ws = new WebSocket("ws://" + location.host + "/ws");
@@ -57,6 +77,7 @@
                         document.getElementById("status").innerText = "Online";
                         document.getElementById("uptime").innerText = data.uptime + "s";
                         document.getElementById("heap").innerText = (data.heap / 1024).toFixed(2) + " KB";
+                        if (data.screen) document.getElementById("screen").innerText = data.screen;
                     } else if (data.type === "artwork") {
                         fetch("/artwork").then(r => r.text()).then(b64 => {
                             const img = document.getElementById("dashArt");
@@ -76,6 +97,15 @@
             }
         };
         function sendCommand(cmd) { ws.send(JSON.stringify({ type: "command", action: cmd })); }
+        function sendScreensaver() {
+            const file = document.getElementById("screensaverInput").files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                ws.send(JSON.stringify({ type: "set_screensaver", image: e.target.result }));
+            };
+            reader.readAsDataURL(file);
+        }
         function sendImage() {
             const file = document.getElementById("imageInput").files[0];
             if (!file) return;

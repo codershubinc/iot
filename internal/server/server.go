@@ -30,6 +30,8 @@ func HandleWebSocket(h *hub.Hub, w http.ResponseWriter, r *http.Request) {
 	state.WallpaperMu.Lock()
 	state.ForceRedraw = true
 	state.WallpaperMu.Unlock()
+	
+	go imageutil.SendStoredScreensaver(h)
 
 	defer func() {
 		h.RemoveClient(conn)
@@ -48,6 +50,11 @@ func HandleWebSocket(h *hub.Hub, w http.ResponseWriter, r *http.Request) {
 				if typ == "wallpaper" {
 					if imgData, ok := data["image"].(string); ok {
 						go imageutil.HandleWallpaper(h, imgData)
+						continue
+					}
+				} else if typ == "set_screensaver" {
+					if imgData, ok := data["image"].(string); ok {
+						go imageutil.HandleScreensaver(h, imgData)
 						continue
 					}
 				} else if typ == "command" {
