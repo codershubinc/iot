@@ -9,12 +9,12 @@ static int lastGpuPct = -1;
 
 void drawGaugeTrack(int x, int y, int r, String label) {
     tft.fillCircle(x, y, r, COLOR_DARK_GREY);
-    tft.fillRect(x - r, y, r * 2 + 1, r + 1, ST77XX_BLACK);
-    tft.fillCircle(x, y, r - 3, ST77XX_BLACK);
-    tft.fillRect(x - r + 3, y, (r - 3) * 2 + 1, r - 3 + 1, ST77XX_BLACK);
+    tft.fillRect(x - r, y, r * 2 + 1, r + 1, TFT_BLACK);
+    tft.fillCircle(x, y, r - 3, TFT_BLACK);
+    tft.fillRect(x - r + 3, y, (r - 3) * 2 + 1, r - 3 + 1, TFT_BLACK);
     
     tft.setTextSize(1);
-    tft.setTextColor(COLOR_ACCENT, ST77XX_BLACK);
+    tft.setTextColor(COLOR_ACCENT, TFT_BLACK);
     tft.setCursor(x - 8, y + 16);
     tft.print(label);
 }
@@ -24,9 +24,9 @@ void drawGaugeNeedle(int x, int y, int r, int oldPct, int newPct, uint16_t color
         float oldAngle = 3.14159 - (oldPct * 3.14159 / 100.0);
         int ox = x + (r - 2) * cos(oldAngle);
         int oy = y - (r - 2) * sin(oldAngle);
-        tft.drawLine(x, y, ox, oy, ST77XX_BLACK);
-        tft.drawLine(x-1, y, ox, oy, ST77XX_BLACK);
-        tft.drawLine(x+1, y, ox, oy, ST77XX_BLACK);
+        tft.drawLine(x, y, ox, oy, TFT_BLACK);
+        tft.drawLine(x-1, y, ox, oy, TFT_BLACK);
+        tft.drawLine(x+1, y, ox, oy, TFT_BLACK);
     }
 
     float newAngle = 3.14159 - (newPct * 3.14159 / 100.0);
@@ -36,11 +36,11 @@ void drawGaugeNeedle(int x, int y, int r, int oldPct, int newPct, uint16_t color
     tft.drawLine(x-1, y, nx, ny, color);
     tft.drawLine(x+1, y, nx, ny, color);
     
-    tft.fillCircle(x, y, 3, ST77XX_WHITE);
+    tft.fillCircle(x, y, 3, TFT_WHITE);
     
-    tft.fillRect(x - 12, y + 6, 24, 10, ST77XX_BLACK);
+    tft.fillRect(x - 12, y + 6, 24, 10, TFT_BLACK);
     tft.setTextSize(1);
-    tft.setTextColor(ST77XX_WHITE, ST77XX_BLACK);
+    tft.setTextColor(TFT_WHITE, TFT_BLACK);
     int textX = x - 8;
     if (newPct < 10) textX = x - 4;
     else if (newPct == 100) textX = x - 12;
@@ -50,15 +50,15 @@ void drawGaugeNeedle(int x, int y, int r, int oldPct, int newPct, uint16_t color
 
 void drawServerScreen() {
     if (gNeedsFullRedraw) {
-        tft.fillScreen(ST77XX_BLACK);
+        tft.fillScreen(TFT_BLACK);
         tft.setTextSize(1);
-        tft.setTextColor(ST77XX_WHITE, ST77XX_BLACK);
+        tft.setTextColor(TFT_WHITE, TFT_BLACK);
         
         tft.setCursor(35, 8);
         tft.print("arch@swap");
         tft.drawFastHLine(10, 18, 108, COLOR_DARK_GREY);
         
-        tft.setTextColor(COLOR_ACCENT, ST77XX_BLACK);
+        tft.setTextColor(COLOR_ACCENT, TFT_BLACK);
         tft.setCursor(5, 80); tft.print("Up: ");
         tft.setCursor(5, 93); tft.print("Disk:");
         tft.setCursor(5, 106); tft.print("Net: ");
@@ -76,7 +76,7 @@ void drawServerScreen() {
     }
     
     tft.setTextSize(1);
-    tft.setTextColor(ST77XX_WHITE, ST77XX_BLACK);
+    tft.setTextColor(TFT_WHITE, TFT_BLACK);
     tft.setCursor(45, 80); tft.print(gServerUptime + "       ");
     tft.setCursor(45, 93); tft.print(gServerStorage + "       ");
     tft.setCursor(45, 106); tft.print("D:" + gNetDown + " U:" + gNetUp + "      ");

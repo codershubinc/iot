@@ -64,6 +64,7 @@
         <h3 style="margin-top: 20px;">Set Screensaver</h3>
         <input type="file" id="screensaverInput" accept="image/*" style="width: 100%; margin-bottom: 10px;">
         <button onclick="sendScreensaver()" style="background: #a371f7;">Upload Screensaver</button>
+        <button onclick="sendCommand('test_sleep')" style="background: #3fb950; margin-top: 10px;">Test Screensaver (Sleep Now)</button>
     </div>
     <script>
         const ws = new WebSocket("ws://" + location.host + "/ws");

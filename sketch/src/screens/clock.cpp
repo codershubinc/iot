@@ -18,7 +18,7 @@ void drawClockScreen() {
         }
 
         tft.setTextSize(3);
-        tft.setTextColor(ST77XX_WHITE, COLOR_CARD_BG);
+        tft.setTextColor(TFT_WHITE, COLOR_CARD_BG);
         tft.setCursor(8, 48);
         tft.print(hhmm);
 
@@ -44,36 +44,36 @@ void drawClockScreen() {
     else if (currentClockStyle == 1) {
         // STYLE 1: Huge Minimal
         if (gNeedsFullRedraw) {
-            tft.fillScreen(ST77XX_BLACK);
+            tft.fillScreen(TFT_BLACK);
         }
         tft.setTextSize(4);
-        tft.setTextColor(gThemeColor, ST77XX_BLACK);
+        tft.setTextColor(gThemeColor, TFT_BLACK);
         tft.setCursor(6, 45);
         tft.print(hhmm);
         
         tft.setTextSize(1);
-        tft.setTextColor(COLOR_DARK_GREY, ST77XX_BLACK);
+        tft.setTextColor(COLOR_DARK_GREY, TFT_BLACK);
         tft.setCursor(64 - (gClockDate.length() * 3), 90);
         tft.print(gClockDate);
     }
     else if (currentClockStyle == 2) {
         // STYLE 2: Tech Vertical
         if (gNeedsFullRedraw) {
-            tft.fillScreen(ST77XX_BLACK);
+            tft.fillScreen(TFT_BLACK);
             tft.drawRect(5, 5, 118, 148, COLOR_DARK_GREY);
         }
         tft.setTextSize(2);
-        tft.setTextColor(ST77XX_WHITE, ST77XX_BLACK);
+        tft.setTextColor(TFT_WHITE, TFT_BLACK);
         
         if (hhmm.length() >= 5) {
             tft.setCursor(45, 20); tft.print(hhmm.substring(0, 2));
             tft.setCursor(45, 45); tft.print(hhmm.substring(3, 5));
         }
-        tft.setTextColor(COLOR_ACCENT, ST77XX_BLACK);
+        tft.setTextColor(COLOR_ACCENT, TFT_BLACK);
         tft.setCursor(45, 70); tft.print(ss);
         
         tft.setTextSize(1);
-        tft.setTextColor(gThemeColor, ST77XX_BLACK);
+        tft.setTextColor(gThemeColor, TFT_BLACK);
         tft.setCursor(15, 110); tft.print(gClockDate + "   ");
         tft.setCursor(15, 125); tft.print(gWeather + "   ");
     }

@@ -1,7 +1,7 @@
 #include "globals.h"
 #include "../config/config.h"
 
-Adafruit_ST7735 tft = Adafruit_ST7735(TFT_CS, TFT_DC, TFT_RST);
+TFT_eSPI tft = TFT_eSPI();
 WebSocketsClient webSocket;
 
 const char *ssid = "null";

@@ -1,13 +1,13 @@
 package api
 
 import (
-	"os/exec"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
-	"strings"
+	"os/exec"
 	"strconv"
+	"strings"
 	"time"
 
 	"codersshubinc/quazaar-iot/internal/hub"
@@ -73,16 +73,17 @@ func renewToken() bool {
 	json.NewDecoder(resp.Body).Decode(&res)
 	if token, ok := res["token"]; ok {
 		storageToken = token
-		tokenExpiry = time.Now().Add(4 * time.Hour + 50 * time.Minute)
+		tokenExpiry = time.Now().Add(4*time.Hour + 50*time.Minute)
 		return true
 	}
 	return false
 }
 
-
 func getRAM() string {
 	b, err := os.ReadFile("/proc/meminfo")
-	if err != nil { return "Unknown" }
+	if err != nil {
+		return "Unknown"
+	}
 	lines := strings.Split(string(b), "\n")
 	var total, avail float64
 	for _, line := range lines {
@@ -113,8 +114,10 @@ var firstNetRun = true
 
 func getNetSpeeds() (string, string) {
 	b, err := os.ReadFile("/proc/net/dev")
-	if err != nil { return "0B/s", "0B/s" }
-	
+	if err != nil {
+		return "0B/s", "0B/s"
+	}
+
 	lines := strings.Split(string(b), "\n")
 	var rx, tx uint64
 	for _, line := range lines {
@@ -128,12 +131,12 @@ func getNetSpeeds() (string, string) {
 			}
 		}
 	}
-	
+
 	rxDiff := rx - lastRx
 	txDiff := tx - lastTx
 	lastRx = rx
 	lastTx = tx
-	
+
 	formatSpeed := func(bytes uint64) string {
 		bytes /= 5 // 5 second polling interval
 		if bytes > 1024*1024 {
@@ -143,12 +146,12 @@ func getNetSpeeds() (string, string) {
 		}
 		return fmt.Sprintf("%dB/s", bytes)
 	}
-	
+
 	if firstNetRun {
 		firstNetRun = false
 		return "0B/s", "0B/s"
 	}
-	
+
 	return formatSpeed(rxDiff), formatSpeed(txDiff)
 }
 
@@ -163,23 +166,23 @@ func getGPUStats() (string, string, string) {
 		util := strings.TrimSpace(parts[0])
 		power := strings.TrimSpace(parts[1])
 		fan := strings.TrimSpace(parts[2])
-		
+
 		if pVal, err := strconv.ParseFloat(power, 64); err == nil {
 			power = fmt.Sprintf("%.0fW", pVal)
 		} else {
 			power = "N/A"
 		}
-		
+
 		if strings.Contains(fan, "N/A") || strings.Contains(fan, "Not") {
 			fan = "N/A"
 		} else {
 			fan += "%"
 		}
-		
+
 		if strings.Contains(util, "N/A") || strings.Contains(util, "Not") {
 			util = "0"
 		}
-		
+
 		return util, power, fan
 	}
 	return "0", "0W", "0RPM"
@@ -239,7 +242,7 @@ func getStorage() string {
 	req, _ := http.NewRequest("GET", "http://localhost:8080/api/system/storage", nil)
 	req.Header.Set("Authorization", "Bearer "+storageToken)
 	resp, err := http.DefaultClient.Do(req)
-	
+
 	if err != nil {
 		return "API Error"
 	}
@@ -271,13 +274,19 @@ func PollHostStats(h *hub.Hub) {
 		down, up := getNetSpeeds()
 		gpuUtil, gpuPower, gpuFan := getGPUStats()
 		sysFan := getSensorsFan()
-		if sysFan == "" { sysFan = gpuFan }
+		if sysFan == "" {
+			sysFan = gpuFan
+		}
 		cpuTemp := getCPUTemp()
 		// removed combinedPower
 
 		// Max 21 chars for ESP32 formatting safely
-		if len(osName) > 20 { osName = osName[:20] }
-		if len(kernel) > 20 { kernel = kernel[:20] }
+		if len(osName) > 20 {
+			osName = osName[:20]
+		}
+		if len(kernel) > 20 {
+			kernel = kernel[:20]
+		}
 
 		payload := map[string]string{
 			"type":      "server_stats",
@@ -292,10 +301,10 @@ func PollHostStats(h *hub.Hub) {
 			"cpu_temp":  cpuTemp,
 			"fan":       sysFan,
 		}
-		
+
 		b, _ := json.Marshal(payload)
 		h.BroadcastText(b, nil)
 
-		time.Sleep(5 * time.Second)
+		time.Sleep(2 * time.Second)
 	}
 }

@@ -16,7 +16,7 @@ void webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
     Serial.println("[WS] Connected!");
     currentMode = MUSIC;
     gNeedsFullRedraw = true;
-    tft.fillScreen(ST77XX_BLACK);
+    tft.fillScreen(TFT_BLACK);
     webSocket.sendTXT("{\"type\":\"command\",\"action\":\"refresh_art\"}");
     break;
 
@@ -24,7 +24,7 @@ void webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
   {
     if (payload[0] == '{')
     {
-      StaticJsonDocument<200> doc;
+      JsonDocument doc;
       DeserializationError error = deserializeJson(doc, payload);
 
       if (!error && doc["type"] == "server_stats")
@@ -71,30 +71,35 @@ void webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
           ESP.restart();
         }
         else if (doc["action"] == "clear") {
-          tft.fillScreen(ST77XX_BLACK);
+          tft.fillScreen(TFT_BLACK);
           currentMode = MUSIC;
         } else if (doc["action"] == "set_screen_music") {
-          currentMode = MUSIC; tft.fillScreen(ST77XX_BLACK); gNeedsFullRedraw = true; drawCurrentScreen();
+          currentMode = MUSIC; tft.fillScreen(TFT_BLACK); gNeedsFullRedraw = true; drawCurrentScreen();
         } else if (doc["action"] == "set_screen_clock") {
-          currentMode = CLOCK; tft.fillScreen(ST77XX_BLACK); gNeedsFullRedraw = true; drawCurrentScreen();
+          currentMode = CLOCK; tft.fillScreen(TFT_BLACK); gNeedsFullRedraw = true; drawCurrentScreen();
         } else if (doc["action"] == "set_screen_stats") {
-          currentMode = STATS; tft.fillScreen(ST77XX_BLACK); gNeedsFullRedraw = true; drawCurrentScreen();
+          currentMode = STATS; tft.fillScreen(TFT_BLACK); gNeedsFullRedraw = true; drawCurrentScreen();
         } else if (doc["action"] == "set_screen_server") {
-          currentMode = SERVER; tft.fillScreen(ST77XX_BLACK); gNeedsFullRedraw = true; drawCurrentScreen();
+          currentMode = SERVER; tft.fillScreen(TFT_BLACK); gNeedsFullRedraw = true; drawCurrentScreen();
         } else if (doc["action"] == "set_clock_0") {
-          currentClockStyle = 0; if(currentMode==CLOCK){tft.fillScreen(ST77XX_BLACK); gNeedsFullRedraw=true; drawCurrentScreen();}
+          currentClockStyle = 0; if(currentMode==CLOCK){tft.fillScreen(TFT_BLACK); gNeedsFullRedraw=true; drawCurrentScreen();}
         } else if (doc["action"] == "set_clock_1") {
-          currentClockStyle = 1; if(currentMode==CLOCK){tft.fillScreen(ST77XX_BLACK); gNeedsFullRedraw=true; drawCurrentScreen();}
+          currentClockStyle = 1; if(currentMode==CLOCK){tft.fillScreen(TFT_BLACK); gNeedsFullRedraw=true; drawCurrentScreen();}
         } else if (doc["action"] == "set_clock_2") {
-          currentClockStyle = 2; if(currentMode==CLOCK){tft.fillScreen(ST77XX_BLACK); gNeedsFullRedraw=true; drawCurrentScreen();}
+          currentClockStyle = 2; if(currentMode==CLOCK){tft.fillScreen(TFT_BLACK); gNeedsFullRedraw=true; drawCurrentScreen();}
         }
         else if (doc["action"] == "wallpaper") {
-          tft.fillScreen(ST77XX_BLACK);
+          tft.fillScreen(TFT_BLACK);
           currentMode = WALLPAPER;
         } else if (doc["action"] == "upload_screensaver") {
           isUploadingScreensaver = true;
           if (dynamicScreensaver == nullptr) {
-            dynamicScreensaver = (uint16_t*)malloc(32768);
+            if (psramFound()) {
+                dynamicScreensaver = (uint16_t*)ps_malloc(32768);
+            }
+            if (dynamicScreensaver == nullptr) {
+                dynamicScreensaver = (uint16_t*)malloc(32768);
+            }
           }
         }
       }
@@ -164,13 +169,13 @@ void webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
       uint8_t chunkIndex = payload[0];
       int y_start = chunkIndex * 16;
 
-      tft.drawRGBBitmap(0, y_start, (uint16_t *)&payload[1], 128, 16);
+      tft.pushImage(0, y_start, 128, 16, (uint16_t *)&payload[1]);
 
       if (chunkIndex == 0)
-        maskCornersTop(12, ST77XX_BLACK);
+        maskCornersTop(12, TFT_BLACK);
       if (chunkIndex == 7)
       {
-        maskCornersBottom(12, ST77XX_BLACK);
+        maskCornersBottom(12, TFT_BLACK);
         gNeedsBadgeRedraw = true;
         drawCurrentScreen();
       }

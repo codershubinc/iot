@@ -27,24 +27,24 @@ void maskCornersBottom(int r, uint16_t color) {
 void drawBluetoothBadge() {
     if (gBtConnected && gBtBattery >= 0) {
         if (gNeedsBadgeRedraw || gNeedsFullRedraw) {
-            tft.fillRoundRect(4, 108, 46, 16, 4, COLOR_CARD_BG);
+            tft.fillRoundRect(4, 4, 46, 16, 4, COLOR_CARD_BG);
             
-            tft.fillCircle(11, 114, 2, ST77XX_WHITE); 
-            tft.fillRoundRect(10, 114, 3, 6, 1, ST77XX_WHITE);
+            tft.fillCircle(11, 10, 2, TFT_WHITE); 
+            tft.fillRoundRect(10, 10, 3, 6, 1, TFT_WHITE);
             
-            tft.fillCircle(17, 114, 2, ST77XX_WHITE);
-            tft.fillRoundRect(16, 114, 3, 6, 1, ST77XX_WHITE);
+            tft.fillCircle(17, 10, 2, TFT_WHITE);
+            tft.fillRoundRect(16, 10, 3, 6, 1, TFT_WHITE);
             
             gNeedsBadgeRedraw = false;
         }
         
         tft.setTextSize(1);
         uint16_t battColor = gThemeColor;
-        if (gBtBattery <= 20) battColor = ST77XX_RED;
+        if (gBtBattery <= 20) battColor = TFT_RED;
         else if (gBtBattery <= 50) battColor = COLOR_TIME;
         
         tft.setTextColor(battColor, COLOR_CARD_BG);
-        tft.setCursor(24, 112);
+        tft.setCursor(24, 8);
         tft.print(String(gBtBattery) + "% ");
     }
 }
@@ -60,7 +60,7 @@ void drawPlayPauseIcon() {
             tft.fillRect(112, 144, 2, 7, gThemeColor);
             tft.fillRect(116, 144, 2, 7, gThemeColor);
         } else {
-            tft.fillTriangle(113, 143, 113, 151, 119, 147, ST77XX_WHITE);
+            tft.fillTriangle(113, 143, 113, 151, 119, 147, TFT_WHITE);
         }
     }
 }

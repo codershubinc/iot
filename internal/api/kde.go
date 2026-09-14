@@ -10,6 +10,7 @@ import (
 	"os"
 	"strconv"
 	"time"
+	"strings"
 
 	"codersshubinc/quazaar-iot/internal/hub"
 	"codersshubinc/quazaar-iot/internal/imageutil"
@@ -85,9 +86,13 @@ func PollMusicData(h *hub.Hub) {
 		timeStr := time.Now().Format("15:04:05")
 		dateStr := time.Now().Format("Mon, Jan 2")
 
+		// Strip newlines to prevent payload parsing corruption on ESP32
+		cleanTitle := strings.ReplaceAll(apiData.Player.Title, "\n", " ")
+		cleanArtist := strings.ReplaceAll(apiData.Player.Artist, "\n", " ")
+		
 		payloadText := fmt.Sprintf("%s\n%s\n%s\n%s\n%s\n%d\n%s\n%s\n%d\n",
-			apiData.Player.Title,
-			apiData.Player.Artist,
+			cleanTitle,
+			cleanArtist,
 			timeutil.FormatTime(apiData.Player.Position),
 			timeutil.FormatTime(apiData.Player.Length),
 			apiData.Player.Status,

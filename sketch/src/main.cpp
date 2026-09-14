@@ -27,7 +27,7 @@ bool wakeUpIfNeeded() {
   lastPlayingTime = millis(); // Reset idle timer on any button press!
   if (isSleeping) {
     isSleeping = false;
-    tft.fillScreen(ST77XX_BLACK);
+    tft.fillScreen(TFT_BLACK);
     gNeedsFullRedraw = true;
     drawCurrentScreen();
     return true;
@@ -39,7 +39,9 @@ bool wakeUpIfNeeded() {
 void setup()
 {
   Serial.begin(115200);
-  tft.initR(INITR_BLACKTAB);
+  tft.init();
+  tft.setSwapBytes(true);
+  tft.invertDisplay(false);
   tft.setTextWrap(false);
 
   playBootAnimation();
@@ -47,9 +49,15 @@ void setup()
   ArduinoOTA.setHostname("quazaar-esp32");
   ArduinoOTA.begin();
 
-  webSocket.begin(serverIP, serverPort, "/ws");
-  webSocket.onEvent(webSocketEvent);
-  webSocket.setReconnectInterval(5000);
+  if (serverIP != "offline") {
+    webSocket.begin(serverIP, serverPort, "/ws");
+    webSocket.onEvent(webSocketEvent);
+    webSocket.setReconnectInterval(5000);
+  } else {
+    currentMode = CLOCK;
+    gNeedsFullRedraw = true;
+    drawCurrentScreen();
+  }
 
   // --- BTN 1 (Volume Decrease) ---
   btnPlayPause.attachClick([]() {
@@ -95,7 +103,7 @@ void setup()
       webSocket.sendTXT("{\"type\":\"command\",\"action\":\"refresh_art\"}");
     }
     
-    tft.fillScreen(ST77XX_BLACK);
+    tft.fillScreen(TFT_BLACK);
     gNeedsFullRedraw = true;
     drawCurrentScreen();
   });
@@ -114,7 +122,7 @@ void loop()
     lastPlayingTime = millis();
     if (isSleeping) {
       isSleeping = false;
-      tft.fillScreen(ST77XX_BLACK);
+      tft.fillScreen(TFT_BLACK);
       gNeedsFullRedraw = true;
       drawCurrentScreen();
     }
@@ -123,11 +131,11 @@ void loop()
   // Screensaver after 5 minutes of inactivity (300,000 ms)
   if (!isSleeping && millis() - lastPlayingTime > 300000) {
     isSleeping = true;
-    tft.fillScreen(ST77XX_BLACK);
+    tft.fillScreen(TFT_BLACK);
     if (dynamicScreensaver != nullptr) {
-      tft.drawRGBBitmap(0, 0, dynamicScreensaver, 128, 128);
+      tft.pushImage(0, 0, 128, 128, dynamicScreensaver);
     } else {
-      tft.drawRGBBitmap(0, 0, screensaver_img, 128, 128);
+      tft.pushImage(0, 0, 128, 128, screensaver_img);
     }
   }
 
@@ -142,7 +150,7 @@ void loop()
   {
     if (webSocket.isConnected())
     {
-      StaticJsonDocument<200> doc;
+      JsonDocument doc;
       doc["type"] = "telemetry";
       doc["uptime"] = millis() / 1000;
       doc["heap"] = ESP.getFreeHeap();

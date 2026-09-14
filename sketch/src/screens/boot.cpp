@@ -10,13 +10,13 @@ void playBootAnimation() {
   pinMode(BTN_PREV, INPUT_PULLUP);
   pinMode(BTN_FOUR, INPUT_PULLUP);
 
-  tft.fillScreen(ST77XX_BLACK);
+  tft.fillScreen(TFT_BLACK);
   
   tft.fillRoundRect(8, 20, 112, 120, 12, COLOR_CARD_BG);
   tft.drawRoundRect(8, 20, 112, 120, 12, COLOR_DARK_GREY);
 
   tft.setTextSize(2);
-  tft.setTextColor(ST77XX_WHITE);
+  tft.setTextColor(TFT_WHITE);
   tft.setCursor(22, 35);
   tft.print("Quazaar");
 
@@ -36,14 +36,25 @@ void playBootAnimation() {
   int progress = 0;
   tft.setTextColor(COLOR_ARTIST, COLOR_CARD_BG);
 
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(50);
+  int wifiAttempts = 0;
+  while (WiFi.status() != WL_CONNECTED && wifiAttempts < 500) { // 10 seconds max
+    delay(20);
+    wifiAttempts++;
     progress += 4;
     if (progress > barWidth) progress = barWidth;
     
     tft.fillRoundRect(barX, barY, progress, barHeight, 3, COLOR_PROGRESS);
     tft.setCursor(20, 85);
     tft.print("Wi-Fi Connect...");
+  }
+  
+  if (WiFi.status() != WL_CONNECTED) {
+    serverIP = "offline";
+    tft.setCursor(20, 85);
+    tft.print("Wi-Fi Failed!   ");
+    delay(1000);
+    tft.fillScreen(TFT_BLACK);
+    return;
   }
 
   tft.setCursor(20, 85);
@@ -53,7 +64,8 @@ void playBootAnimation() {
     Serial.println("Error starting mDNS");
   }
 
-  while (serverIP == "") {
+  int mdnsAttempts = 0;
+  while (serverIP == "" && mdnsAttempts < 75) { // 15 seconds max
     Serial.println("Searching for mDNS service 'quazaar-iot'...");
     int n = MDNS.queryService("quazaar-iot", "tcp");
     if (n > 0) {
@@ -72,10 +84,22 @@ void playBootAnimation() {
     } else {
       Serial.println("No services found, retrying...");
     }
+    
+    if (serverIP != "") break; // Skip the delay if we found it!
+    
+    mdnsAttempts++;
+    delay(200); // reduced from 1000 to check much faster!
+  }
+  
+  if (serverIP == "") {
+    serverIP = "offline";
+    tft.setCursor(20, 85);
+    tft.print("Host Missing!   ");
     delay(1000);
+    tft.fillScreen(TFT_BLACK);
+    return;
   }
 
   tft.fillRoundRect(barX, barY, barWidth, barHeight, 3, COLOR_PROGRESS);
-  delay(100);
-  tft.fillScreen(ST77XX_BLACK);
+  tft.fillScreen(TFT_BLACK);
 }

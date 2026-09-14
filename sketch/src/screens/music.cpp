@@ -24,31 +24,49 @@ void drawMusicScreen() {
     }
 
     tft.setTextSize(1);
-    tft.setTextColor(ST77XX_WHITE, ST77XX_BLACK);
+    tft.setTextColor(TFT_WHITE, TFT_BLACK);
     
-    String leftStr = tCurr;
-    while (leftStr.length() < 5) leftStr += " ";
-    tft.setCursor(5, 120);
-    tft.print(leftStr);
-
-    String rightStr = tTot;
-    while (rightStr.length() < 5) rightStr = " " + rightStr;
-    tft.setCursor(123 - (rightStr.length() * 6), 120);
-    tft.print(rightStr);
-
-    String tTitle = gTitle;
-    String tArtist = gArtist;
-    while (tTitle.length() < 17) tTitle += " ";
-    while (tArtist.length() < 17) tArtist += " ";
+    static String lastCurr = "";
+    static String lastTot = "";
+    static String lastTitle = "";
+    static String lastArtist = "";
+    static uint16_t lastThemeColor = 0;
 
     tft.setTextSize(1);
-    tft.setCursor(5, 140);
-    tft.setTextColor(ST77XX_WHITE, ST77XX_BLACK);
-    tft.print(tTitle.substring(0, 16));
+    tft.setTextColor(TFT_WHITE, TFT_BLACK);
 
-    tft.setCursor(5, 150);
-    tft.setTextColor(gThemeColor, ST77XX_BLACK);
-    tft.print(tArtist.substring(0, 16));
+    if (tCurr != lastCurr || tTot != lastTot || gNeedsFullRedraw || gNeedsBadgeRedraw) {
+        // Draw elegant pill backgrounds for the time text so it doesn't look like a glitchy black bar
+        tft.fillRoundRect(2, 118, (tCurr.length() * 6) + 6, 11, 3, TFT_BLACK);
+        tft.fillRoundRect(120 - (tTot.length() * 6), 118, (tTot.length() * 6) + 6, 11, 3, TFT_BLACK);
+        
+        tft.setCursor(5, 120);
+        tft.print(tCurr);
+        tft.setCursor(123 - (tTot.length() * 6), 120);
+        tft.print(tTot);
+        lastCurr = tCurr;
+        lastTot = tTot;
+    }
+
+    // Pad strings to ensure old characters are wiped if title gets shorter
+    String tTitle = gTitle.substring(0, 16);
+    String tArtist = gArtist.substring(0, 16);
+    while(tTitle.length() < 16) tTitle += " ";
+    while(tArtist.length() < 16) tArtist += " ";
+
+    if (tTitle != lastTitle || tArtist != lastArtist || gThemeColor != lastThemeColor || gNeedsFullRedraw || gNeedsBadgeRedraw) {
+        tft.setCursor(5, 140);
+        tft.setTextColor(TFT_WHITE, TFT_BLACK);
+        tft.print(tTitle);
+        
+        tft.setCursor(5, 150);
+        tft.setTextColor(gThemeColor, TFT_BLACK);
+        tft.print(tArtist);
+        
+        lastTitle = tTitle;
+        lastArtist = tArtist;
+        lastThemeColor = gThemeColor;
+    }
 
     drawBluetoothBadge();
     drawPlayPauseIcon();

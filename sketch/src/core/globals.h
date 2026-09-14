@@ -2,10 +2,10 @@
 #define GLOBALS_H
 
 #include <Arduino.h>
-#include <Adafruit_ST7735.h>
+#include <TFT_eSPI.h>
 #include <WebSocketsClient.h>
 
-extern Adafruit_ST7735 tft;
+extern TFT_eSPI tft;
 extern WebSocketsClient webSocket;
 
 extern const char *ssid;
