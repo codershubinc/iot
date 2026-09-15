@@ -126,7 +126,7 @@ func PollMusicData(h *hub.Hub) {
 			h.BroadcastText(artPayload, nil)
 
 			// Convert the image to 128x128 RGB565 hex bytes using our new utility
-			rgb565Data, err := imageutil.ConvertBase64ToRGB565(lastArtwork, 128, 128)
+			rgb565Data, err := imageutil.ConvertBase64ToRGB565(lastArtwork, 128, 128, "crop")
 			if err != nil {
 				// If parsing fails (e.g., corrupt base64), default to a blank byte array
 				rgb565Data = make([]byte, 128*128*2)

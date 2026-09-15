@@ -1,6 +1,7 @@
 package server
 
 import (
+
 	"encoding/json"
 	_ "embed"
 	"log"
@@ -49,12 +50,16 @@ func HandleWebSocket(h *hub.Hub, w http.ResponseWriter, r *http.Request) {
 			if typ, ok := data["type"].(string); ok {
 				if typ == "wallpaper" {
 					if imgData, ok := data["image"].(string); ok {
-						go imageutil.HandleWallpaper(h, imgData)
+						mode := "crop"
+						if m, ok := data["resize_mode"].(string); ok { mode = m }
+						go imageutil.HandleWallpaper(h, imgData, mode)
 						continue
 					}
 				} else if typ == "set_screensaver" {
 					if imgData, ok := data["image"].(string); ok {
-						go imageutil.HandleScreensaver(h, imgData)
+						mode := "crop"
+						if m, ok := data["resize_mode"].(string); ok { mode = m }
+						go imageutil.HandleScreensaver(h, imgData, mode)
 						continue
 					}
 				} else if typ == "command" {
@@ -74,7 +79,7 @@ func HandleWebSocket(h *hub.Hub, w http.ResponseWriter, r *http.Request) {
 							exec.Command("wpctl", "set-mute", "@DEFAULT_AUDIO_SINK@", "toggle").Start()
 						case "fullscreen_art":
 							if state.CurrentArtworkBase64 != "" {
-								go imageutil.HandleWallpaper(h, state.CurrentArtworkBase64)
+								go imageutil.HandleWallpaper(h, state.CurrentArtworkBase64, "fit")
 							}
 						case "refresh_art":
 							state.WallpaperMu.Lock()
@@ -105,7 +110,7 @@ func SetupHTTP(h *hub.Hub, port string) {
 		HandleWebSocket(h, w, r)
 	})
 
-	log.Println("Quazaar Server running at http://localhost:" + port)
+		log.Println("Quazaar Server running at http://localhost:" + port)
 	log.Fatal(http.ListenAndServe(":"+port, nil))
 }
 

@@ -1,18 +1,22 @@
 package imageutil
 
 import (
+	"fmt"
+
 	"bytes"
 	"encoding/base64"
 	"image"
+	"image/color"
 	_ "image/jpeg"
 	_ "image/png"
+	_ "golang.org/x/image/webp"
 	"strings"
 
 	"golang.org/x/image/draw"
 	"codersshubinc/quazaar-iot/internal/state"
 )
 
-func ConvertBase64ToRGB565(b64Str string, width, height int) ([]byte, error) {
+func ConvertBase64ToRGB565(b64Str string, width, height int, mode string) ([]byte, error) {
 	// Strip the "data:image/png;base64," prefix if it exists
 	if idx := strings.Index(b64Str, ","); idx != -1 {
 		b64Str = b64Str[idx+1:]
@@ -21,34 +25,50 @@ func ConvertBase64ToRGB565(b64Str string, width, height int) ([]byte, error) {
 	// Decode Base64 to raw image bytes
 	imgBytes, err := base64.StdEncoding.DecodeString(b64Str)
 	if err != nil {
+		fmt.Printf("Base64 Decode Error: %v\n", err)
 		return nil, err
 	}
 
 	// Decode raw bytes into an image object
-	img, _, err := image.Decode(bytes.NewReader(imgBytes))
+	img, format, err := image.Decode(bytes.NewReader(imgBytes))
 	if err != nil {
+		fmt.Printf("Image Decode Error: %v\n", err)
 		return nil, err
 	}
+	fmt.Printf("Successfully decoded image of format: %s\n", format)
 
 	// Create a new RGBA canvas at the exact target dimensions (e.g. 128x128)
 	dst := image.NewRGBA(image.Rect(0, 0, width, height))
 
-	// Calculate center crop to avoid stretching
 	bounds := img.Bounds()
 	origW := bounds.Dx()
 	origH := bounds.Dy()
-	
-	minDim := origW
-	if origH < origW {
-		minDim = origH
-	}
-	
-	cropX := (origW - minDim) / 2
-	cropY := (origH - minDim) / 2
-	srcRect := image.Rect(cropX, cropY, cropX+minDim, cropY+minDim).Add(bounds.Min)
 
-	// Scale the cropped original image to fit the new dimensions
-	draw.BiLinear.Scale(dst, dst.Rect, img, srcRect, draw.Over, nil)
+	if mode == "stretch" {
+		draw.BiLinear.Scale(dst, dst.Rect, img, bounds, draw.Over, nil)
+	} else if mode == "fit" {
+		draw.Draw(dst, dst.Bounds(), image.NewUniform(color.Black), image.Point{}, draw.Src)
+		ratioW := float64(width) / float64(origW)
+		ratioH := float64(height) / float64(origH)
+		ratio := ratioW
+		if ratioH < ratioW { ratio = ratioH }
+		
+		newW := int(float64(origW) * ratio)
+		newH := int(float64(origH) * ratio)
+		padX := (width - newW) / 2
+		padY := (height - newH) / 2
+		
+		destRect := image.Rect(padX, padY, padX+newW, padY+newH)
+		draw.BiLinear.Scale(dst, destRect, img, bounds, draw.Over, nil)
+	} else {
+		// Default: Center Crop
+		minDim := origW
+		if origH < origW { minDim = origH }
+		cropX := (origW - minDim) / 2
+		cropY := (origH - minDim) / 2
+		srcRect := image.Rect(cropX, cropY, cropX+minDim, cropY+minDim).Add(bounds.Min)
+		draw.BiLinear.Scale(dst, dst.Rect, img, srcRect, draw.Over, nil)
+	}
 
 	// Convert the 32-bit RGBA pixels into 16-bit RGB565 hex bytes
 	var rgb565Data []byte

@@ -43,3 +43,13 @@ func (h *Hub) BroadcastBinary(message []byte) {
 		client.WriteMessage(websocket.BinaryMessage, message)
 	}
 }
+
+func (h *Hub) BroadcastBinaryFromSender(message []byte, sender *websocket.Conn) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	for client := range h.clients {
+		if client != sender {
+			client.WriteMessage(websocket.BinaryMessage, message)
+		}
+	}
+}

@@ -30,8 +30,8 @@ func SendStoredScreensaver(h *hub.Hub) {
 	}
 }
 
-func HandleScreensaver(h *hub.Hub, b64Str string) {
-	rgb565Data, err := ConvertBase64ToRGB565(b64Str, 128, 128)
+func HandleScreensaver(h *hub.Hub, b64Str string, mode string) {
+	rgb565Data, err := ConvertBase64ToRGB565(b64Str, 128, 128, mode)
 	if err != nil {
 		return
 	}
@@ -53,13 +53,13 @@ func HandleScreensaver(h *hub.Hub, b64Str string) {
 }
 
 
-func HandleWallpaper(h *hub.Hub, b64Str string) {
+func HandleWallpaper(h *hub.Hub, b64Str string, mode string) {
 	state.WallpaperMu.Lock()
 	state.WallpaperMode = true
 	state.WallpaperMu.Unlock()
 
 	// Convert the image to 128x160 RGB565 hex bytes using our new utility
-	rgb565Data, err := ConvertBase64ToRGB565(b64Str, 128, 160)
+	rgb565Data, err := ConvertBase64ToRGB565(b64Str, 128, 160, mode)
 	if err != nil {
 		return
 	}
@@ -78,6 +78,7 @@ func HandleWallpaper(h *hub.Hub, b64Str string) {
 		frame = append(frame, rgb565Data[start:end]...)
 
 		h.BroadcastBinary(frame)
+		time.Sleep(10 * time.Millisecond)
 	}
 
 	time.AfterFunc(5*time.Second, func() {

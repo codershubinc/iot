@@ -59,10 +59,20 @@
         <button class="danger" onclick="sendCommand('reboot')">Restart ESP32</button>
         <hr style="border: 1px solid #30363d; margin: 20px 0;">
         <h3>Set Wallpaper</h3>
-        <input type="file" id="imageInput" accept="image/*" style="width: 100%; margin-bottom: 10px;">
+        <input type="file" id="imageInput" accept="image/*" style="width: 100%; margin-bottom: 5px;">
+        <select id="wallpaperMode" style="width: 100%; padding: 5px; margin-bottom: 10px; background: #0d1117; color: white; border: 1px solid #30363d; border-radius: 4px;">
+            <option value="crop">Center Crop (Square)</option>
+            <option value="fit">Fit (Black Borders)</option>
+            <option value="stretch">Stretch to Screen</option>
+        </select>
         <button onclick="sendImage()">Set Wallpaper (5s)</button>
         <h3 style="margin-top: 20px;">Set Screensaver</h3>
-        <input type="file" id="screensaverInput" accept="image/*" style="width: 100%; margin-bottom: 10px;">
+        <input type="file" id="screensaverInput" accept="image/*" style="width: 100%; margin-bottom: 5px;">
+        <select id="screensaverMode" style="width: 100%; padding: 5px; margin-bottom: 10px; background: #0d1117; color: white; border: 1px solid #30363d; border-radius: 4px;">
+            <option value="crop">Center Crop (Square)</option>
+            <option value="fit">Fit (Black Borders)</option>
+            <option value="stretch">Stretch to Screen</option>
+        </select>
         <button onclick="sendScreensaver()" style="background: #a371f7;">Upload Screensaver</button>
         <button onclick="sendCommand('test_sleep')" style="background: #3fb950; margin-top: 10px;">Test Screensaver (Sleep Now)</button>
     </div>
@@ -103,7 +113,8 @@
             if (!file) return;
             const reader = new FileReader();
             reader.onload = function(e) {
-                ws.send(JSON.stringify({ type: "set_screensaver", image: e.target.result }));
+                const mode = document.getElementById("screensaverMode").value;
+                ws.send(JSON.stringify({ type: "set_screensaver", image: e.target.result, resize_mode: mode }));
             };
             reader.readAsDataURL(file);
         }
@@ -112,7 +123,8 @@
             if (!file) return;
             const reader = new FileReader();
             reader.onload = function(e) {
-                ws.send(JSON.stringify({ type: "wallpaper", image: e.target.result }));
+                const mode = document.getElementById("wallpaperMode").value;
+                ws.send(JSON.stringify({ type: "wallpaper", image: e.target.result, resize_mode: mode }));
             };
             reader.readAsDataURL(file);
         }
