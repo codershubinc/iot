@@ -14,8 +14,8 @@ import (
 )
 
 var (
-	storageToken = "36e723ec4f7103c75b64138f8c040975f7477cc1c06d46a8bcd158caff935937"
-	masterToken  = "60336e2fde7ad22b5bc1f108cf9526ce5b5e8aedfd8931defbab2383dc93f465"
+	storageToken = "0b385b7fb22a77b2e08f093a2db4de7f8efc47077758b799d71bb0121d331a8f"
+	masterToken  = "fb750ffac811ae2177d89f34131ac2308c1799a7e4b3d20b24dba539facc583f"
 	tokenExpiry  time.Time
 )
 
@@ -62,7 +62,7 @@ func getUptime() string {
 }
 
 func renewToken() bool {
-	req, _ := http.NewRequest("POST", "http://localhost:8080/api/token/generate", nil)
+	req, _ := http.NewRequest("POST", "http://localhost:8080/api/v1/auth/token/generate", nil)
 	req.Header.Set("Authorization", "Bearer "+masterToken)
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil || (resp.StatusCode != 200 && resp.StatusCode != 201) {
@@ -239,7 +239,7 @@ func getStorage() string {
 	if time.Now().After(tokenExpiry) {
 		renewToken()
 	}
-	req, _ := http.NewRequest("GET", "http://localhost:8080/api/system/storage", nil)
+	req, _ := http.NewRequest("GET", "http://localhost:8080/api/v1/system/storage", nil)
 	req.Header.Set("Authorization", "Bearer "+storageToken)
 	resp, err := http.DefaultClient.Do(req)
 
