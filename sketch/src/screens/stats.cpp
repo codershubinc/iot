@@ -24,8 +24,15 @@ void drawStatsScreen() {
     
     tft.setTextSize(1);
     tft.setTextColor(TFT_WHITE, COLOR_CARD_BG);
-    tft.setCursor(34, 48); tft.print(WiFi.localIP().toString() + "       ");
-    tft.setCursor(40, 68); tft.print(String(ESP.getFreeHeap() / 1024) + " KB    ");
-    tft.setCursor(46, 88); tft.print(String(WiFi.RSSI()) + " dBm    ");
-    tft.setCursor(46, 108); tft.print(String(temperatureRead(), 1) + " C    ");
+    if (WiFi.status() == WL_CONNECTED) {
+        tft.setCursor(34, 48); tft.print(WiFi.localIP().toString() + "       ");
+        tft.setCursor(40, 68); tft.print(String(ESP.getFreeHeap() / 1024) + " KB    ");
+        tft.setCursor(46, 88); tft.print(String(WiFi.RSSI()) + " dBm    ");
+        tft.setCursor(46, 108); tft.print(String(temperatureRead(), 1) + " C    ");
+    } else {
+        tft.setCursor(34, 48); tft.print("No Network    ");
+        tft.setCursor(40, 68); tft.print(String(ESP.getFreeHeap() / 1024) + " KB    ");
+        tft.setCursor(46, 88); tft.print("Offline       ");
+        tft.setCursor(46, 108); tft.print(String(temperatureRead(), 1) + " C    ");
+    }
 }

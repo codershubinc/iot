@@ -21,4 +21,14 @@
 #define COLOR_CARD_BG 0x18E3
 #define COLOR_DARK_GREY 0x2104
 
+// Structure for WiFi network credentials
+struct WiFiCredential {
+    const char *ssid;
+    const char *password;
+};
+
+// Configured WiFi networks (defined in globals.cpp)
+extern const WiFiCredential WIFI_NETWORKS[];
+extern const size_t WIFI_NETWORKS_COUNT;
+
 #endif

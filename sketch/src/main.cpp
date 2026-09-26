@@ -47,9 +47,11 @@ void setup()
   playBootAnimation();
 
   ArduinoOTA.setHostname("quazaar-esp32");
-  ArduinoOTA.begin();
+  if (WiFi.status() == WL_CONNECTED) {
+    ArduinoOTA.begin();
+  }
 
-  if (serverIP != "offline") {
+  if (serverIP != "offline" && serverIP != "") {
     webSocket.begin(serverIP, serverPort, "/ws");
     webSocket.onEvent(webSocketEvent);
     webSocket.setReconnectInterval(5000);
@@ -114,8 +116,11 @@ void setup()
 
 void loop()
 {
+  handleNetworkLoop();
   webSocket.loop();
-  ArduinoOTA.handle();
+  if (WiFi.status() == WL_CONNECTED) {
+    ArduinoOTA.handle();
+  }
 
 
   if (gStatus == "Playing") {

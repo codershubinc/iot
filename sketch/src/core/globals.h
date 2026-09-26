@@ -4,6 +4,7 @@
 #include <Arduino.h>
 #include <TFT_eSPI.h>
 #include <WebSocketsClient.h>
+#include "../config/config.h"
 
 extern TFT_eSPI tft;
 extern WebSocketsClient webSocket;

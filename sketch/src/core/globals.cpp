@@ -4,8 +4,14 @@
 TFT_eSPI tft = TFT_eSPI();
 WebSocketsClient webSocket;
 
-const char *ssid = "null";
-const char *password = "Aeiou@2357";
+const WiFiCredential WIFI_NETWORKS[] = {
+    {"null", "Aeiou@2357"},
+    {"${SSID}", "aeiou@2357"},
+};
+const size_t WIFI_NETWORKS_COUNT = sizeof(WIFI_NETWORKS) / sizeof(WIFI_NETWORKS[0]);
+
+const char *ssid = WIFI_NETWORKS[0].ssid;
+const char *password = WIFI_NETWORKS[0].password;
 
 String serverIP = "";
 uint16_t serverPort = 8081;
@@ -45,5 +51,5 @@ bool gBtConnected = false;
 bool gNeedsBadgeRedraw = true;
 bool isSleeping = false;
 bool isUploadingScreensaver = false;
-uint8_t* dynamicScreensaverChunks[8] = {nullptr};
+uint8_t *dynamicScreensaverChunks[8] = {nullptr};
 int currentClockStyle = 0;
