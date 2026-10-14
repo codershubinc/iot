@@ -2,6 +2,7 @@
 #include "../core/globals.h"
 #include "../screens/display.h"
 #include "../screens/widgets.h"
+#include "../core/audio_controller.h"
 #include <ArduinoJson.h>
 #include <WiFi.h>
 #include <ESPmDNS.h>
@@ -67,6 +68,33 @@ void webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
           drawCurrentScreen();
       }
 
+      if (!error && doc["type"] == "bot")
+      {
+        if (doc["text"].is<const char*>()) {
+          gBotText = doc["text"].as<String>();
+        }
+        if (doc["expression"].is<const char*>()) {
+          gBotExpression = doc["expression"].as<String>();
+        }
+        currentMode = BOT;
+        gNeedsFullRedraw = true;
+        drawCurrentScreen();
+
+        // If engine is not mp3, or if no url is streamed, speak directly on-chip via SAM
+        String engine = doc["engine"] | "sam";
+        if (engine == "sam" && gBotText.length() > 0) {
+          speakBotText(gBotText.c_str());
+        }
+      }
+
+      if (!error && doc["type"] == "play_audio")
+      {
+        if (doc["url"].is<const char*>()) {
+          const char* audioUrl = doc["url"].as<const char*>();
+          playAudioURL(audioUrl);
+        }
+      }
+
       if (!error && doc["type"] == "command")
       {
         if (doc["action"] == "reboot")
@@ -76,6 +104,15 @@ void webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
         else if (doc["action"] == "clear") {
           tft.fillScreen(TFT_BLACK);
           currentMode = MUSIC;
+        } else if (doc["action"] == "stop_audio") {
+          stopAudio();
+          drawCurrentScreen();
+        } else if (doc["action"] == "set_volume") {
+          if (doc["volume"].is<float>()) {
+            setAudioVolume(doc["volume"].as<float>());
+          } else if (doc["volume"].is<int>()) {
+            setAudioVolume(doc["volume"].as<int>() / 100.0f);
+          }
         } else if (doc["action"] == "set_screen_music") {
           currentMode = MUSIC; tft.fillScreen(TFT_BLACK); gNeedsFullRedraw = true; drawCurrentScreen();
         } else if (doc["action"] == "set_screen_clock") {
@@ -84,6 +121,8 @@ void webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
           currentMode = STATS; tft.fillScreen(TFT_BLACK); gNeedsFullRedraw = true; drawCurrentScreen();
         } else if (doc["action"] == "set_screen_server") {
           currentMode = SERVER; tft.fillScreen(TFT_BLACK); gNeedsFullRedraw = true; drawCurrentScreen();
+        } else if (doc["action"] == "set_screen_bot") {
+          currentMode = BOT; tft.fillScreen(TFT_BLACK); gNeedsFullRedraw = true; drawCurrentScreen();
         } else if (doc["action"] == "set_clock_0") {
           currentClockStyle = 0; if(currentMode==CLOCK){tft.fillScreen(TFT_BLACK); gNeedsFullRedraw=true; drawCurrentScreen();}
         } else if (doc["action"] == "set_clock_1") {

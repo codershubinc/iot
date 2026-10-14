@@ -7,9 +7,14 @@
 #define TFT_RST 4
 #define TFT_DC 2
 
-#define BTN_PLAY_PAUSE 26
+// Hardware DAC Pins for PAM8266 Audio Amplifier
+#define AUDIO_DAC_L 25
+#define AUDIO_DAC_R 26
+
+// Buttons moved from 25/26 to free DAC channels
+#define BTN_PLAY_PAUSE 32
 #define BTN_NEXT 27
-#define BTN_PREV 25
+#define BTN_PREV 33
 #define BTN_FOUR 14
 #define DEBOUNCE_DELAY 200
 

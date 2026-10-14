@@ -4,12 +4,16 @@ import (
 
 	"encoding/json"
 	_ "embed"
+	"fmt"
+	"io"
 	"log"
 	"net/http"
+	"net/url"
 	"os/exec"
 
 	"codersshubinc/quazaar-iot/internal/hub"
 	"codersshubinc/quazaar-iot/internal/imageutil"
+	"codersshubinc/quazaar-iot/internal/mdns"
 	"codersshubinc/quazaar-iot/internal/state"
 	"github.com/gorilla/websocket"
 )
@@ -110,6 +114,58 @@ func SetupHTTP(h *hub.Hub, port string) {
 		HandleWebSocket(h, w, r)
 	})
 
+	http.HandleFunc("/bot", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html")
+		w.Write([]byte(botHTML))
+	})
+
+	// Local HTTP MP3 proxy so ESP32 streams unblocked HTTP MP3
+	http.HandleFunc("/audio/tts.mp3", func(w http.ResponseWriter, r *http.Request) {
+		text := r.URL.Query().Get("q")
+		if text == "" {
+			http.Error(w, "missing q parameter", http.StatusBadRequest)
+			return
+		}
+		ttsURL := fmt.Sprintf("https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=en&q=%s", url.QueryEscape(text))
+		req, err := http.NewRequest("GET", ttsURL, nil)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		req.Header.Set("User-Agent", "Mozilla/5.0")
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		defer resp.Body.Close()
+
+		w.Header().Set("Content-Type", "audio/mpeg")
+		io.Copy(w, resp.Body)
+	})
+
+	http.HandleFunc("/tts", func(w http.ResponseWriter, r *http.Request) {
+		text := r.URL.Query().Get("text")
+		if text == "" {
+			http.Error(w, "missing text parameter", http.StatusBadRequest)
+			return
+		}
+		host := mdns.GetLocalIP()
+		if host == "" {
+			host = r.Host
+		} else {
+			host = host + ":" + port
+		}
+		audioURL := fmt.Sprintf("http://%s/audio/tts.mp3?q=%s", host, url.QueryEscape(text))
+		cmd := map[string]interface{}{
+			"type": "play_audio",
+			"url":  audioURL,
+		}
+		msg, _ := json.Marshal(cmd)
+		h.BroadcastText(msg, nil)
+		w.Write([]byte("OK"))
+	})
+
 		log.Println("Quazaar Server running at http://localhost:" + port)
 	log.Fatal(http.ListenAndServe(":"+port, nil))
 }
@@ -118,3 +174,6 @@ func SetupHTTP(h *hub.Hub, port string) {
 
 //go:embed index.html
 var dashboardHTML []byte
+
+//go:embed bot.html
+var botHTML []byte

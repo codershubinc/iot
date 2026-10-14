@@ -15,8 +15,12 @@ extern const char *password;
 extern String serverIP;
 extern uint16_t serverPort;
 
-enum DisplayMode { BOOT, MUSIC, CLOCK, STATS, SERVER, WALLPAPER };
+enum DisplayMode { BOOT, MUSIC, CLOCK, STATS, SERVER, WALLPAPER, BOT };
 extern DisplayMode currentMode;
+
+extern String gBotText;
+extern String gBotExpression;
+extern bool gBotSpeaking;
 
 extern String currentTitle;
 extern String currentArtist;

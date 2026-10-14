@@ -11,6 +11,7 @@
 #include "screens/boot.h"
 #include "network/network.h"
 #include "screens/screensaver_img.h"
+#include "core/audio_controller.h"
 
 unsigned long lastTelemetry = 0;
 
@@ -45,6 +46,7 @@ void setup()
   tft.setTextWrap(false);
 
   playBootAnimation();
+  setupAudio();
 
   ArduinoOTA.setHostname("quazaar-esp32");
   if (WiFi.status() == WL_CONNECTED) {
@@ -96,7 +98,8 @@ void setup()
     if (currentMode == MUSIC) currentMode = CLOCK;
     else if (currentMode == CLOCK) currentMode = STATS;
     else if (currentMode == STATS) currentMode = SERVER;
-    else if (currentMode == SERVER) {
+    else if (currentMode == SERVER) currentMode = BOT;
+    else if (currentMode == BOT) {
       currentMode = MUSIC;
       webSocket.sendTXT("{\"type\":\"command\",\"action\":\"refresh_art\"}");
     }
@@ -122,6 +125,13 @@ void loop()
     ArduinoOTA.handle();
   }
 
+  // Handle continuous audio streaming decode
+  loopAudio();
+
+  // Animate mouth when bot is active & speaking
+  if (currentMode == BOT && gBotSpeaking) {
+    drawCurrentScreen();
+  }
 
   if (gStatus == "Playing") {
     lastPlayingTime = millis();
@@ -165,7 +175,11 @@ void loop()
       doc["type"] = "telemetry";
       doc["uptime"] = millis() / 1000;
       doc["heap"] = ESP.getFreeHeap();
-      doc["screen"] = currentMode == MUSIC ? "Music" : currentMode == CLOCK ? "Clock" : currentMode == STATS ? "ESP Stats" : "Host Server";
+      uint32_t flashTotal = ESP.getFlashChipSize();
+      uint32_t flashUsed = ESP.getSketchSize();
+      doc["flash_free"] = (flashTotal > flashUsed) ? (flashTotal - flashUsed) : 0;
+      doc["flash_total"] = flashTotal;
+      doc["screen"] = currentMode == MUSIC ? "Music" : currentMode == CLOCK ? "Clock" : currentMode == STATS ? "ESP Stats" : currentMode == SERVER ? "Host Server" : "Bot Screen";
       doc["clock_style"] = currentClockStyle;
 
       String jsonString;

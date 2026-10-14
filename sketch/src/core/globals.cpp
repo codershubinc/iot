@@ -53,3 +53,6 @@ bool isSleeping = false;
 bool isUploadingScreensaver = false;
 uint8_t *dynamicScreensaverChunks[8] = {nullptr};
 int currentClockStyle = 0;
+String gBotText = "Ready to talk...";
+String gBotExpression = "happy";
+bool gBotSpeaking = false;

@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quazaar Bot Communicator</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background: #0d1117;
+            color: #c9d1d9;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 1rem;
+        }
+        .container {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 12px;
+            width: 100%;
+            max-width: 520px;
+            padding: 2rem;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+        h1 {
+            font-size: 1.4rem;
+            color: #58a6ff;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .status-badge {
+            font-size: 0.8rem;
+            padding: 4px 10px;
+            border-radius: 20px;
+            background: #21262d;
+            border: 1px solid #30363d;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #f85149;
+        }
+        .status-dot.online {
+            background: #3fb950;
+            box-shadow: 0 0 8px #3fb950;
+        }
+
+        /* Bot Face Preview */
+        .bot-preview-card {
+            background: #0d1117;
+            border: 1px solid #30363d;
+            border-radius: 10px;
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            position: relative;
+            overflow: hidden;
+        }
+        .robot-head {
+            width: 120px;
+            height: 85px;
+            background: #182333;
+            border: 2px solid #30363d;
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-around;
+            align-items: center;
+            padding: 10px 0;
+            transition: all 0.3s ease;
+        }
+        .robot-eyes {
+            display: flex;
+            gap: 20px;
+        }
+        .eye {
+            width: 22px;
+            height: 24px;
+            border-radius: 6px;
+            background: #07e066;
+            transition: all 0.3s;
+            position: relative;
+        }
+        .eye::after {
+            content: '';
+            position: absolute;
+            top: 4px;
+            left: 4px;
+            width: 5px;
+            height: 5px;
+            background: #000;
+            border-radius: 50%;
+        }
+        .mouth {
+            width: 28px;
+            height: 5px;
+            background: #fff;
+            border-radius: 3px;
+            transition: all 0.15s ease;
+        }
+        .mouth.talking {
+            animation: mouthTalk 0.25s infinite alternate;
+        }
+        @keyframes mouthTalk {
+            0% { height: 4px; border-radius: 2px; }
+            100% { height: 14px; border-radius: 7px; background: #fff; }
+        }
+
+        .bot-subtitles {
+            margin-top: 12px;
+            font-size: 0.95rem;
+            color: #8b949e;
+            text-align: center;
+            font-style: italic;
+            min-height: 24px;
+            word-break: break-word;
+        }
+
+        /* Controls */
+        label {
+            display: block;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-bottom: 6px;
+            color: #8b949e;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        textarea {
+            width: 100%;
+            height: 90px;
+            background: #0d1117;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            color: #fff;
+            padding: 10px;
+            font-size: 1rem;
+            font-family: inherit;
+            resize: none;
+            margin-bottom: 1rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        textarea:focus {
+            border-color: #58a6ff;
+        }
+        .row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 1.2rem;
+        }
+        select {
+            flex: 1;
+            background: #0d1117;
+            border: 1px solid #30363d;
+            color: #c9d1d9;
+            padding: 10px;
+            border-radius: 6px;
+            font-size: 0.95rem;
+            outline: none;
+            cursor: pointer;
+        }
+        button.btn-speak {
+            background: #238636;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 12px 24px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: background 0.2s;
+        }
+        button.btn-speak:hover {
+            background: #2ea043;
+        }
+        button.btn-speak:active {
+            transform: scale(0.99);
+        }
+
+        /* Quick phrases */
+        .quick-chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-bottom: 1.2rem;
+        }
+        .chip {
+            background: #21262d;
+            color: #8b949e;
+            border: 1px solid #30363d;
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .chip:hover {
+            background: #30363d;
+            color: #fff;
+            border-color: #58a6ff;
+        }
+        .nav-link {
+            display: block;
+            text-align: center;
+            margin-top: 1.5rem;
+            color: #58a6ff;
+            text-decoration: none;
+            font-size: 0.85rem;
+        }
+        .nav-link:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🤖 Bot Voice Station</h1>
+            <div class="status-badge">
+                <span id="statusDot" class="status-dot"></span>
+                <span id="statusText">Connecting</span>
+            </div>
+        </div>
+
+        <!-- Visual Feedback Box -->
+        <div class="bot-preview-card">
+            <div class="robot-head" id="robotHead">
+                <div class="robot-eyes">
+                    <div class="eye" id="eyeL"></div>
+                    <div class="eye" id="eyeR"></div>
+                </div>
+                <div class="mouth" id="robotMouth"></div>
+            </div>
+            <div class="bot-subtitles" id="subtitles">"Awaiting speech..."</div>
+        </div>
+
+        <!-- Quick Phrases -->
+        <label>Quick Phrases</label>
+        <div class="quick-chips">
+            <span class="chip" onclick="setPhrase('Hello! I am ready.', 'happy')">👋 Hello</span>
+            <span class="chip" onclick="setPhrase('Task completed successfully!', 'happy')">✅ Done</span>
+            <span class="chip" onclick="setPhrase('System alert! Please check your server.', 'surprised')">⚠️ Warning</span>
+            <span class="chip" onclick="setPhrase('I will now play your favorite music.', 'happy')">🎵 Music</span>
+            <span class="chip" onclick="setPhrase('Goodbye! Entering sleep mode.', 'surprised')">💤 Bye</span>
+        </div>
+
+        <!-- Input controls -->
+        <label for="textInput">Text to Speak</label>
+        <textarea id="textInput" placeholder="Type message for the ESP32 bot to speak..."></textarea>
+
+        <div class="row">
+            <div style="flex:1;">
+                <label for="expressionSelect">Expression</label>
+                <select id="expressionSelect" onchange="updateFaceColor()">
+                    <option value="happy">😊 Happy (Green)</option>
+                    <option value="surprised">😮 Surprised (Yellow)</option>
+                    <option value="angry">😡 Alert / Angry (Red)</option>
+                </select>
+            </div>
+            <div style="flex:1;">
+                <label for="voiceEngine">Voice Engine</label>
+                <select id="voiceEngine">
+                    <option value="mp3">✨ Natural MP3 (Streamed)</option>
+                    <option value="sam">🤖 Retro Robot (On-Chip SAM)</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Volume Slider -->
+        <div style="margin-bottom: 1.2rem; background: #0d1117; padding: 12px; border-radius: 6px; border: 1px solid #30363d;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                <label style="margin: 0;">🔊 Speaker Volume</label>
+                <span id="volLabel" style="color: #3fb950; font-weight: bold; font-size: 0.9rem;">10%</span>
+            </div>
+            <input type="range" id="volSlider" min="0" max="100" value="10" step="1" oninput="updateVolume(this.value)" style="width: 100%; cursor: pointer; accent-color: #238636;">
+            <div style="font-size: 0.75rem; color: #8b949e; margin-top: 4px;">Recommended: 5% - 25% for 3W PAM8266 amplifier</div>
+        </div>
+
+        <button class="btn-speak" id="btnSpeak" onclick="triggerSpeak()">
+            <span>🔊 Speak on ESP32</span>
+        </button>
+
+        <!-- Stream Custom MP3 URL -->
+        <hr style="border: 1px solid #30363d; margin: 20px 0;">
+        <label for="mp3UrlInput">Stream Custom MP3 to ESP32</label>
+        <div style="display: flex; gap: 8px; margin-bottom: 8px;">
+            <input type="text" id="mp3UrlInput" placeholder="http://.../audio.mp3" style="flex: 1; padding: 10px; background: #0d1117; color: white; border: 1px solid #30363d; border-radius: 6px; font-size: 0.9rem;">
+            <button onclick="triggerStreamMP3()" style="background: #1f6feb; color: white; border: none; padding: 0 16px; border-radius: 6px; font-weight: bold; cursor: pointer;">Play</button>
+            <button onclick="triggerStopAudio()" style="background: #da3633; color: white; border: none; padding: 0 12px; border-radius: 6px; font-weight: bold; cursor: pointer;">⏹ Stop</button>
+        </div>
+
+        <a href="/" class="nav-link">← Back to Quazaar Dashboard</a>
+    </div>
+
+    <script>
+        const ws = new WebSocket("ws://" + location.host + "/ws");
+        const statusDot = document.getElementById("statusDot");
+        const statusText = document.getElementById("statusText");
+        const mouth = document.getElementById("robotMouth");
+        const subtitles = document.getElementById("subtitles");
+        const eyeL = document.getElementById("eyeL");
+        const eyeR = document.getElementById("eyeR");
+
+        ws.onopen = () => {
+            statusDot.classList.add("online");
+            statusText.innerText = "Online";
+        };
+        ws.onclose = () => {
+            statusDot.classList.remove("online");
+            statusText.innerText = "Disconnected";
+        };
+
+        function updateFaceColor() {
+            const expr = document.getElementById("expressionSelect").value;
+            let col = "#07e066";
+            if (expr === "surprised") col = "#ffe000";
+            if (expr === "angry") col = "#f85149";
+            eyeL.style.background = col;
+            eyeR.style.background = col;
+        }
+
+        function setPhrase(phrase, expr) {
+            document.getElementById("textInput").value = phrase;
+            if (expr) {
+                document.getElementById("expressionSelect").value = expr;
+                updateFaceColor();
+            }
+        }
+
+        function updateVolume(val) {
+            document.getElementById("volLabel").innerText = val + "%";
+            if (ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({
+                    type: "command",
+                    action: "set_volume",
+                    volume: parseInt(val)
+                }));
+            }
+        }
+
+        function triggerSpeak() {
+            const text = document.getElementById("textInput").value.trim();
+            const expr = document.getElementById("expressionSelect").value;
+            const engine = document.getElementById("voiceEngine").value;
+            if (!text) return;
+
+            // 1. Update Preview animation
+            subtitles.innerText = `"${text}"`;
+            mouth.classList.add("talking");
+            setTimeout(() => {
+                mouth.classList.remove("talking");
+            }, Math.max(1800, text.length * 85));
+
+            // 2. Send WebSocket command to ESP32 (Switches screen to Bot and animates)
+            if (ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({
+                    type: "bot",
+                    text: text,
+                    expression: expr,
+                    engine: engine,
+                    speaking: true
+                }));
+            }
+
+            // 3. Audio output
+            if (engine === "mp3") {
+                // High quality natural voice stream
+                fetch("/tts?text=" + encodeURIComponent(text));
+            }
+        }
+
+        function triggerStreamMP3() {
+            const url = document.getElementById("mp3UrlInput").value.trim();
+            if (!url) return;
+            if (ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({
+                    type: "play_audio",
+                    url: url
+                }));
+            }
+        }
+
+        function triggerStopAudio() {
+            if (ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({
+                    type: "command",
+                    action: "stop_audio"
+                }));
+            }
+        }
+
+        // Enter key to send (Shift+Enter for newline)
+        document.getElementById("textInput").addEventListener("keydown", (e) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                triggerSpeak();
+            }
+        });
+    </script>
+</body>
+</html>

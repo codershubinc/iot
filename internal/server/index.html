@@ -23,6 +23,7 @@
         <div class="stat"><span>Active Screen:</span> <span id="screen" class="val" style="color: #58a6ff;">Unknown</span></div>
         <div class="stat"><span>Uptime:</span> <span id="uptime" class="val">0s</span></div>
         <div class="stat"><span>Free Heap:</span> <span id="heap" class="val">0 KB</span></div>
+        <div class="stat"><span>Flash Storage:</span> <span id="storage" class="val">-</span></div>
         
         <hr style="border: 1px solid #30363d; margin: 20px 0;">
         <div class="player">
@@ -39,15 +40,27 @@
         </div>
 
         <hr style="border: 1px solid #30363d; margin: 20px 0;">
-        <hr style="border: 1px solid #30363d; margin: 20px 0;">
         <h3>ESP32 Display Control</h3>
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
             <button onclick="sendCommand('set_screen_music')" style="background: #1f6feb;">🎵 Music</button>
             <button onclick="sendCommand('set_screen_clock')" style="background: #1f6feb;">🕒 Clock</button>
             <button onclick="sendCommand('set_screen_stats')" style="background: #1f6feb;">📊 ESP Stats</button>
             <button onclick="sendCommand('set_screen_server')" style="background: #1f6feb;">💻 Host Stats</button>
+            <button onclick="sendCommand('set_screen_bot')" style="background: #238636; grid-column: span 2;">🤖 Bot Screen</button>
         </div>
         
+        <h3 style="margin-top: 20px;">🤖 Bot Speech & Expressions</h3>
+        <input type="text" id="botTextInput" placeholder="Enter text to speak..." style="width: 100%; padding: 8px; box-sizing: border-box; background: #0d1117; color: white; border: 1px solid #30363d; border-radius: 4px; margin-bottom: 8px;">
+        <div style="display: flex; gap: 10px; margin-bottom: 8px;">
+            <select id="botExpr" style="flex: 1; padding: 8px; background: #0d1117; color: white; border: 1px solid #30363d; border-radius: 4px;">
+                <option value="happy">Happy</option>
+                <option value="surprised">Surprised</option>
+                <option value="angry">Angry</option>
+            </select>
+            <button onclick="sendBotMsg()" style="flex: 1; margin-top: 0; background: #238636;">Speak</button>
+        </div>
+        <a href="/bot" style="display:block; text-align:center; color:#58a6ff; font-size:0.85em; text-decoration:none; margin-top:4px;">Open Full Bot Communicator Page ↗</a>
+
         <h3 style="margin-top: 20px;">Clock Styles</h3>
         <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px;">
             <button onclick="sendCommand('set_clock_0')" style="background: #8957e5;">Classic</button>
@@ -88,6 +101,11 @@
                         document.getElementById("status").innerText = "Online";
                         document.getElementById("uptime").innerText = data.uptime + "s";
                         document.getElementById("heap").innerText = (data.heap / 1024).toFixed(2) + " KB";
+                        if (data.flash_free !== undefined && data.flash_total !== undefined) {
+                            const freeMB = (data.flash_free / (1024 * 1024)).toFixed(2);
+                            const totalMB = (data.flash_total / (1024 * 1024)).toFixed(2);
+                            document.getElementById("storage").innerText = freeMB + " / " + totalMB + " MB remaining";
+                        }
                         if (data.screen) document.getElementById("screen").innerText = data.screen;
                     } else if (data.type === "artwork") {
                         fetch("/artwork").then(r => r.text()).then(b64 => {
@@ -127,6 +145,18 @@
                 ws.send(JSON.stringify({ type: "wallpaper", image: e.target.result, resize_mode: mode }));
             };
             reader.readAsDataURL(file);
+        }
+        function sendBotMsg() {
+            const text = document.getElementById("botTextInput").value;
+            const expr = document.getElementById("botExpr").value;
+            if (!text) return;
+            ws.send(JSON.stringify({
+                type: "bot",
+                text: text,
+                expression: expr,
+                speaking: true
+            }));
+            fetch("/tts?text=" + encodeURIComponent(text));
         }
     </script>
 </body>
